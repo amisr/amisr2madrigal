@@ -416,6 +416,8 @@ class BatchExperiment:
             else:
                 raise "file_version needs to be int or None."
 
+            print(f"working on file: {fullMadFilename}")
+
 
             hdf5Type = self.__iniData__.get(self.fileSection, 'type')
             status = self.__iniData__.get(self.fileSection, 'status')
@@ -756,7 +758,7 @@ class BatchExperiment:
             else:
                 raise "file_version needs to be int or None."
 
-
+            print(f"working on file: {fullMadFilename}")
 
             acceptedFileNums.append(fileNum)
 
