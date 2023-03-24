@@ -743,6 +743,9 @@ class BatchExperiment:
                 madFilename = madFilenameTemplate + kindat2desc(kindat)\
                     + f'.{file_version:03d}.h5'
                 fullMadFilename = os.path.join(OutPath,madFilename)
+                if os.path.exists(fullMadFilename):
+                    print('Skipping file %s - already exists\n' % madFilename)
+                    continue
             elif type(file_version) == type(None):
                 for fcount in range(1,1000):
                     madFilename = madFilenameTemplate + kindat2desc(kindat)\
@@ -753,10 +756,7 @@ class BatchExperiment:
             else:
                 raise "file_version needs to be int or None."
 
-            
-            #if os.path.exists(fullMadFilename):
-            #    print('Skipping file %s - already exists\n' % madFilename)
-            #    continue
+
 
             acceptedFileNums.append(fileNum)
 
