@@ -209,8 +209,30 @@ def createMad3File(args):
         print("Creating Madrigal Catalog Header...")
         now = datetime.datetime.now()
         catHeadObj = madrigal.cedar.CatalogHeaderCreator(tempfile_name)
-        catHeadObj.createCatalog(principleInvestigator=principleInvestigator, expPurpose=expPurpose, expMode=expMode, cycleTime=cycleTime, correlativeExp=correlativeExp, sciRemarks=sciRemarks)
-        catHeadObj.createHeader(kindatDesc=kindatDesc, analyst=analyst, comments=comments, history=history)
+        # principleInvestigator - Names of responsible Principal Investigator(s)
+        #                         or others knowledgeable about the experiment.
+        # expPurpose - Brief description of the experiment purpose
+        # expMode - Further elaboration of meaning of MODEXP; e.g. antenna
+        #           patterns and pulse sequences.
+        # cycleTime - Minutes for one full measurement cycle
+        # correlativeExp - Correlative experiments (experiments with related data)
+        # sciRemarks - scientific remarks
+        # instRemarks - instrument remarks
+
+        catHeadObj.createCatalog(principleInvestigator=principleInvestigator,
+                expPurpose=expPurpose,
+                expMode=expMode,
+                cycleTime=cycleTime,
+                correlativeExp=correlativeExp,
+                sciRemarks=sciRemarks)
+        # kindatDesc - description of how this data was analyzed (the kind of data)
+        # analyst - name of person who analyzed this data
+        # comments - additional comments about data (describe any instrument-specific parameters)
+        # history - a description of the history of the processing of this file
+        catHeadObj.createHeader(kindatDesc=kindatDesc,
+                analyst=analyst,
+                comments=comments,
+                history=history)
         catHeadObj.write()
 
         shutil.copyfile(tempfile_name, fullMadFilename)
@@ -295,6 +317,7 @@ class BatchExperiment:
         """
         file_version : the 3 digit version attached to each file
         """
+
         # create needed Madrigal objects
         self.madDBObj = madrigal.metadata.MadrigalDB()
         madExpObj = madrigal.metadata.MadrigalExperiment(self.madDBObj)
@@ -311,6 +334,11 @@ class BatchExperiment:
         expId = self.__iniData__.get('Experiment', 'expId')
         OutPath = self.__iniData__.get('Experiment','OutPath')
 
+        # PI, Analyst
+        PI = self.__iniData__.get('Experiment', 'pi')
+        PIEmail = self.__iniData__.get('Experiment', 'PIEmail')
+        fileAnalyst = self.__iniData__.get('Experiment', 'fileAnalyst')
+        fileAnalystEmail = self.__iniData__.get('Experiment', 'fileAnalystEmail')
         # parse the expId
         try:
             items = expId.split('.')
@@ -369,15 +397,25 @@ class BatchExperiment:
             self.fileSection = 'File%i' % (fileNum + 1)
             kindat = int(self.__iniData__.get(self.fileSection, 'kindat'))
 
-            hdf5Filename = self.__iniData__.get(self.fileSection, 'hdf5Filename')
-            suffix = os.path.basename(hdf5Filename)[12:-3].replace("-fitcal","")
+            #hdf5Filename = self.__iniData__.get(self.fileSection, 'hdf5Filename')
+            #suffix = os.path.basename(hdf5Filename)[12:-3].replace("-fitcal","")
             #madFilename = madFilenameTemplate + '%03i' % (fileNum + 1) + '.hdf5'
             #madFilename = madFilenameTemplate + '%03i' % (fileNum + 1) + suffix + '.hdf5'
             #madFilename = madFilenameTemplate + suffix + '.hdf5'
-            madFilename = madFilenameTemplate + kindat2desc(kindat)\
-                    + f'.{file_version:03d}.hdf5'
-            #        + '.hdf5'
-            fullMadFilename = os.path.join(OutPath,madFilename)
+            if type(file_version) == int:
+                madFilename = madFilenameTemplate + kindat2desc(kindat)\
+                    + f'.{file_version:03d}.h5'
+                fullMadFilename = os.path.join(OutPath,madFilename)
+            elif type(file_version) == type(None):
+                for fcount in range(1,1000):
+                    madFilename = madFilenameTemplate + kindat2desc(kindat)\
+                                + f'.{fcount:03d}.h5'
+                    fullMadFilename = os.path.join(OutPath,madFilename)
+                    if not os.path.exists(fullMadFilename):
+                        break
+            else:
+                raise "file_version needs to be int or None."
+
 
             hdf5Type = self.__iniData__.get(self.fileSection, 'type')
             status = self.__iniData__.get(self.fileSection, 'status')
@@ -389,10 +427,46 @@ class BatchExperiment:
 
             if fileNum==0:# create the experiment
                 try:
+# createMadrigalExperiment creates a new experiment on Madrigal using metadata read from madFilename.
+# Inputs:
+#    madFilename - full path to the complete Madrigal file.  Basename will be maintained.
+#    expTitle - experiment title
+#    permission - 0 (public) or 1 (private) or -1 (ignore).
+#    fileDesc - file description
+#    instCode - instrument code.  If default (None), instrument code is taken from file,
+#          but error    is thrown if more than one kinst found.
+#    category - 1=default, 2=variant, 3=history, or 4=realtime. Default is 1 (default file)
+#    optChar - optional character to be added to experiment directory if no dirName
+#              given.  If dirName argument given, this argument ignored.  optChar
+#              is used if the default directory name DDmmmYY is used for
+#              more than one experiment created for a given instrument on a given day.
+#              For example, if --optChar=h for a MLH experiment on September 12, 2005,
+#              then the experiment directory created would be experiments/2005/mlh/12sep05h.
+#    dirName - directory name to use for experiment.  If None (the default), the directory
+#              name will be the default name DDmmmYY[optChar].  Cannot contain "/"
+#    kindat - if not None (the default), use this kindat instead of what is found in the file.
+#    experimentsDirNum - the number to be appended to the experiments directory, if experiments
+#              directory being used is of the form experiments[0-9]* instead of just
+#              experiments.  For example, if experimentsDirNum is 7, then the experiment
+#              would be created in MADROOT/experiments7 instead of MADROOT/experiments.
+#    PI- full name of principal investigator.  The default is ''
+#    PIEmail - email of principal investigator.  The default is ''
+#    fileAnalyst -full name of file analyst.  The default is ''
+#    fileAnalystEmail - email of file analyst,.  The default is ''
+#    createCachedText - if True, add cached text file in overview/<basename>.txt.gz.  If False,
+#        no cached file.
+#    createCachedNetCDF4 - if True, add cached netCDF4 file in overview/<basename>.nc.  If False,
+#        no cached file.
+#    notify - if True (the default), send a message to all registered users.  If False, do not.
+#    updateToMad3 - if False (the default), error raised if madFilename non-Hdf5 file. If True, try to
+#        convert madFilename to Madrigal with .hdf5 extension before loading.
+
                     expPath = madAdminObj.createMadrigalExperiment(fullMadFilename,
                          expTitle, 0, fileDesc,None,category=category,optChar=optChar,
                          createCachedText=True, createCachedNetCDF4=True,
-                         experimentsDirNum=experimentsDirNum)
+                         experimentsDirNum=experimentsDirNum,
+                         PI=PI,PIEmail=PIEmail,fileAnalyst=fileAnalyst,
+                         fileAnalystEmail=fileAnalystEmail)
                 except IOError:
                     x,y,z = sys.exc_info()
                     print(y)
@@ -404,11 +478,34 @@ class BatchExperiment:
                     if info=='Yes':
                         distutils.dir_util.remove_tree(expPath+'/',verbose=1)
                         expPath = madAdminObj.createMadrigalExperiment(fullMadFilename,
-                        expTitle, 0, fileDesc,None,category=category,optChar=optChar,
-                                createCachedText=True, createCachedNetCDF4=True)
+                            expTitle, 0, fileDesc,None,category=category,optChar=optChar,
+                            createCachedText=True, createCachedNetCDF4=True,
+                             experimentsDirNum=experimentsDirNum,
+                             PI=PI,PIEmail=PIEmail,fileAnalyst=fileAnalyst,
+                             fileAnalystEmail=fileAnalystEmail)
                     else:
                         raise IOError(y)
             else:
+# addMadrigalFile adds a new file to an experiment using metadata read from madFilename.
+# Inputs:
+#    expDir - full path to experiment directory (as returned by createMadriogalExperiment)
+#    madFilename - full path to the complete Madrigal file.  Basename will be maintained.
+#    permission - 0 (public) or 1 (private).
+#    fileDesc - file description
+#    category - 1=default, 2=variant, 3=history, or 4=realtime. Default is 1 (default file)
+#    kindat - if not None (the default), use this kindat instead of what is found in the file.
+#    notify - if True (the default), send a message to all registered users.  If False, do not.
+#    fileAnalyst - full name of file Analyst.  Default is ''
+#    fileAnalystEmail - email of file Analyst.  Default is ''
+#    createCachedText - if True, add cached text file in overview/<basename>.txt.gz.  If False,
+#        no cached file.
+#    createCachedNetCDF4 - if True, add cached netCDF4 file in overview/<basename>.nc.  If False,
+#        no cached file.
+#    updateToMad3 - if False (the default), error raised if madFilename non-Hdf5 file. If True, try to
+#        convert madFilename to Madrigal with .hdf5 extension before loading.
+#    acceptOldSummary - if True, accept an old summary file. Used mainly for upgrading to Madrigal 3.
+#        Default is False.
+
                 madAdminObj.addMadrigalFile(expPath,fullMadFilename,0, fileDesc,
                            category=category,kindat=None,
                            createCachedText=True, createCachedNetCDF4=True)
@@ -549,6 +646,11 @@ class BatchExperiment:
         expId = self.__iniData__.get('Experiment', 'expId')
         OutPath = self.__iniData__.get('Experiment','OutPath')
 
+        # PI, Analyst
+        PI = self.__iniData__.get('Experiment', 'pi')
+        PIEmail = self.__iniData__.get('Experiment', 'PIEmail')
+        fileAnalyst = self.__iniData__.get('Experiment', 'fileAnalyst')
+        fileAnalystEmail = self.__iniData__.get('Experiment', 'fileAnalystEmail')
         # parse the expId
         try:
             items = expId.split('.')
@@ -633,18 +735,28 @@ class BatchExperiment:
             self.fileSection = 'File%i' % (fileNum + 1)
             #madFilename = madFilenameTemplate + '%03i' % (fileNum + 1) + '.hdf5'
             kindat = int(self.__iniData__.get(self.fileSection, 'kindat'))
-            hdf5Filename = self.__iniData__.get(self.fileSection, 'hdf5Filename')
-            suffix = os.path.basename(hdf5Filename)[12:-3].replace("-fitcal","")
+            #hdf5Filename = self.__iniData__.get(self.fileSection, 'hdf5Filename')
+            #suffix = os.path.basename(hdf5Filename)[12:-3].replace("-fitcal","")
             #madFilename = madFilenameTemplate + '%03i' % (fileNum + 1) + suffix + '.hdf5'
             #madFilename = madFilenameTemplate + suffix + '.hdf5'
-            madFilename = madFilenameTemplate + kindat2desc(kindat)\
-                    + f'.{file_version:03d}.hdf5'
-            #        + '.hdf5'
-            fullMadFilename = os.path.join(OutPath,madFilename)
+            if type(file_version) == int:
+                madFilename = madFilenameTemplate + kindat2desc(kindat)\
+                    + f'.{file_version:03d}.h5'
+                fullMadFilename = os.path.join(OutPath,madFilename)
+            elif type(file_version) == type(None):
+                for fcount in range(1,1000):
+                    madFilename = madFilenameTemplate + kindat2desc(kindat)\
+                                + f'.{fcount:03d}.h5'
+                    fullMadFilename = os.path.join(OutPath,madFilename)
+                    if not os.path.exists(fullMadFilename):
+                        break
+            else:
+                raise "file_version needs to be int or None."
 
-            if os.path.exists(fullMadFilename):
-                print('Skipping file %s - already exists\n' % madFilename)
-                continue
+            
+            #if os.path.exists(fullMadFilename):
+            #    print('Skipping file %s - already exists\n' % madFilename)
+            #    continue
 
             acceptedFileNums.append(fileNum)
 
