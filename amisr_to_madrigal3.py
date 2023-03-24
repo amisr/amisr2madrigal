@@ -35,9 +35,19 @@ def main():
         raise Exception('This code must be executed using the "transport" user.')
 
     # command line interface
-    parser = argparse.ArgumentParser(description='Converts and uploads AMISR fitted and derived products to the AMISR Madrigal 3 server.')
-    parser.add_argument('experiment',help='The full path to the experiment directory, e.g. /path/to/20210203.001, which must contain a Madrigal.ini file.')
-    parser.add_argument('--upload',action='store_true',help='set for upload, rather than create from ini')
+    parser = argparse.ArgumentParser(description='Converts and uploads AMISR fitted '
+            'and derived products to the AMISR Madrigal 3 server.')
+    parser.add_argument('experiment',help='The full path to the experiment directory, '
+            'e.g. /path/to/20210203.001, which must contain a Madrigal.ini file.')
+    parser.add_argument('--upload',action='store_true',
+            help='set for upload, rather than create from ini')
+    parser.add_argument('--DirNum', nargs='?', const=None, type=int, default=0, 
+            help = 'sufix added to the folder experiments, '
+            'e.g. DirNum=0 -> experiments0, if no arguments then DirNum==None -> experiments')
+    parser.add_argument('--file_version', nargs='?', const=None, type=int, default=None,
+            help = 'File version added to the filenames .XXX.h5. If file_version==None'
+            ' then file_version will be incremented by one from the previous file. If no'
+            ' file exists then it starts with 1.' )
     args = parser.parse_args()
 
     # make sure input experiment path exists
@@ -58,16 +68,20 @@ def main():
         try:
             os.mkdir(madrigal_directory)
         except:
-            raise Exception("Unable to create the 'Madrigal' directory: %s" % (madrigal_directory))
+            raise Exception("Unable to create the 'Madrigal' directory: %s" % (
+                madrigal_directory))
 
     # Now take the experiment files and convert or upload them to Madrigal 3.
     mad_batch = madrigal3_amisr.BatchExperiment()
     if args.upload:
         print("Uploading to Madrigal 3...")
-        mad_batch.uploadExperiment(madrigal_ini, experimentsDirNum=0)
+        mad_batch.uploadExperiment(madrigal_ini,
+                file_version=args.file_version,
+                experimentsDirNum=args.DirNum)
     else:
         print("Converting to Madrigal 3...")
-        mad_batch.createNewExperimentFromIni(madrigal_ini)
+        mad_batch.createNewExperimentFromIni(madrigal_ini,
+                file_version=args.file_version)
     print("Done.")
 
 
