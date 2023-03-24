@@ -42,12 +42,12 @@ def main():
     parser.add_argument('--upload',action='store_true',
             help='set for upload, rather than create from ini')
     parser.add_argument('--DirNum', nargs='?', const=None, type=int, default=0, 
-            help = 'sufix added to the folder experiments, '
+            help = 'sufix added to the folder experiments, default=0, '
             'e.g. DirNum=0 -> experiments0, if no arguments then DirNum==None -> experiments')
     parser.add_argument('--file_version', nargs='?', const=None, type=int, default=None,
             help = 'File version added to the filenames .XXX.h5. If file_version==None'
             ' then file_version will be incremented by one from the previous file. If no'
-            ' file exists then it starts with 1.' )
+            ' file exists then it starts with 1. default=None' )
     args = parser.parse_args()
 
     # make sure input experiment path exists
