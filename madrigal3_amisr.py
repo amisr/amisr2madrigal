@@ -389,7 +389,7 @@ class BatchExperiment:
         instMnemonic = self.madInstObj.getInstrumentMnemonic(self.instrument).lower()
         #madFilenameTemplate = '%s%02i%02i%02i.' % (instMnemonic, firstTime.year % 100,
         #                                           firstTime.month, firstTime.day)
-        madFilenameTemplate = '%s%04i%02i%02i.' % (instMnemonic, firstTime.year,
+        madFilenameTemplate = '%s%04i%02i%02i' % (instMnemonic, firstTime.year,
                                                    firstTime.month, firstTime.day)
 
         madAdminObj = madrigal.admin.MadrigalDBAdmin()
@@ -397,7 +397,7 @@ class BatchExperiment:
             self.fileSection = 'File%i' % (fileNum + 1)
             kindat = int(self.__iniData__.get(self.fileSection, 'kindat'))
 
-            #hdf5Filename = self.__iniData__.get(self.fileSection, 'hdf5Filename')
+            hdf5Filename = self.__iniData__.get(self.fileSection, 'hdf5Filename')
             #suffix = os.path.basename(hdf5Filename)[12:-3].replace("-fitcal","")
             #madFilename = madFilenameTemplate + '%03i' % (fileNum + 1) + '.hdf5'
             #madFilename = madFilenameTemplate + '%03i' % (fileNum + 1) + suffix + '.hdf5'
@@ -707,7 +707,7 @@ class BatchExperiment:
         instMnemonic = self.madInstObj.getInstrumentMnemonic(self.instrument).lower()
         #madFilenameTemplate = '%s%02i%02i%02i.' % (instMnemonic, firstTime.year % 100,
         #                                           firstTime.month, firstTime.day)
-        madFilenameTemplate = '%s%04i%02i%02i.' % (instMnemonic, firstTime.year,
+        madFilenameTemplate = '%s%04i%02i%02i' % (instMnemonic, firstTime.year,
                                                    firstTime.month, firstTime.day)
 
         # header
@@ -735,7 +735,7 @@ class BatchExperiment:
             self.fileSection = 'File%i' % (fileNum + 1)
             #madFilename = madFilenameTemplate + '%03i' % (fileNum + 1) + '.hdf5'
             kindat = int(self.__iniData__.get(self.fileSection, 'kindat'))
-            #hdf5Filename = self.__iniData__.get(self.fileSection, 'hdf5Filename')
+            hdf5Filename = self.__iniData__.get(self.fileSection, 'hdf5Filename')
             #suffix = os.path.basename(hdf5Filename)[12:-3].replace("-fitcal","")
             #madFilename = madFilenameTemplate + '%03i' % (fileNum + 1) + suffix + '.hdf5'
             #madFilename = madFilenameTemplate + suffix + '.hdf5'
