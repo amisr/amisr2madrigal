@@ -78,10 +78,16 @@ def pulsetype_order(x):
 class MadrigalIni():
     RADARS = {'pfisr': {'name': 'PFISR',
                         'instrument_number': 61,
-                        'pi': 'Asti Bhatt'},
+                        'pi': 'Asti Bhatt',
+                        'PIEmail' : 'asti.bhatt@sri.com',
+                        'fileAnalyst' : 'Pablo Reyes',
+                        'fileAnalystEmail' : 'pablo.reyes@sri.com'},
               'risrn': {'name': 'RISR-N',
                         'instrument_number': 91,
-                        'pi': 'Asti Bhatt'},
+                        'pi': 'Asti Bhatt',
+                        'PIEmail' : 'asti.bhatt@sri.com',
+                        'fileAnalyst' : 'Pablo Reyes',
+                        'fileAnalystEmail' : 'pablo.reyes@sri.com'},
              }
 
     RANGE_LIMS = {'lp': [100.0,1000.0],
@@ -123,6 +129,9 @@ class MadrigalIni():
         self.radar = self.RADARS[radar]['name']
         self.instrument_number = self.RADARS[radar]['instrument_number']
         self.pi = self.RADARS[radar]['pi']
+        self.PIEmail = self.RADARS[radar]['PIEmail']
+        self.fileAnalyst = self.RADARS[radar]['fileAnalyst']
+        self.fileAnalystEmail = self.RADARS[radar]['fileAnalystEmail']
 
         # determine some path information
         self.expdir_path = expdir_path
@@ -231,6 +240,9 @@ class MadrigalIni():
         self.configfile.set('Experiment','logFile','%(DataPath)s/%(ExperimentType)s/%(ExperimentName)s/Madrigal/MadrigalLog.txt')
         self.configfile.set('Experiment','expID','%(ExperimentName)s')
         self.configfile.set('Experiment','pi',self.pi)
+        self.configfile.set('Experiment','PIEmail',self.PIEmail)
+        self.configfile.set('Experiment','fileAnalyst',self.fileAnalyst)
+        self.configfile.set('Experiment','fileAnalystEmail',self.fileAnalystEmail)
         self.configfile.set('Experiment','modexp', self.desc_title_line)
         self.configfile.set('Experiment','cmodexp', self.desc_long_desc_line)
 
