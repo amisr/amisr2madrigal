@@ -463,12 +463,25 @@ class BatchExperiment:
 #    updateToMad3 - if False (the default), error raised if madFilename non-Hdf5 file. If True, try to
 #        convert madFilename to Madrigal with .hdf5 extension before loading.
 
-                    expPath = madAdminObj.createMadrigalExperiment(fullMadFilename,
-                         expTitle, 0, fileDesc,None,category=category,optChar=optChar,
-                         createCachedText=True, createCachedNetCDF4=True,
-                         experimentsDirNum=experimentsDirNum,
-                         PI=PI,PIEmail=PIEmail,fileAnalyst=fileAnalyst,
-                         fileAnalystEmail=fileAnalystEmail)
+                    expPath = madAdminObj.createMadrigalExperiment(
+                            madFilename = fullMadFilename,
+                            expTitle = expTitle,
+                            permission = 0,
+                            fileDesc = fileDesc,
+                            instCode = None,
+                            category = category,
+                            optChar = optChar,
+                            dirName = None,
+                            kindat = None,
+                            experimentsDirNum = experimentsDirNum,
+                            PI = PI,
+                            PIEmail = PIEmail,
+                            fileAnalyst = fileAnalyst,
+                            fileAnalystEmail = fileAnalystEmail,
+                            createCachedText = True,
+                            createCachedNetCDF4 = True,
+                            notify = True,
+                            updatetoMad3 = False)
                 except IOError:
                     x,y,z = sys.exc_info()
                     print(y)
@@ -508,9 +521,19 @@ class BatchExperiment:
 #    acceptOldSummary - if True, accept an old summary file. Used mainly for upgrading to Madrigal 3.
 #        Default is False.
 
-                madAdminObj.addMadrigalFile(expPath,fullMadFilename,0, fileDesc,
-                           category=category,kindat=None,
-                           createCachedText=True, createCachedNetCDF4=True)
+                madAdminObj.addMadrigalFile(expDir = expPath,
+                        madFilename = fullMadFilename,
+                        permission = 0,
+                        fileDesc = fileDesc,
+                        category = category,
+                        kindat = None,
+                        notify = True,
+                        fileAnalyst = fileAnalyst,
+                        fileAnalystEmail = fileAnalystEmail,
+                        createCachedText = True,
+                        createCachedNetCDF4 = True,
+                        updateToMad3 = False,
+                        acceptOldSummary = False)
 
             # see if links to images are desired
             numLinks = 0
