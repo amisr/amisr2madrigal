@@ -46,8 +46,9 @@ def main():
             'e.g. DirNum=0 -> experiments0, if no arguments then DirNum==None -> experiments')
     parser.add_argument('--file_version', nargs='?', const=None, type=int, default=None,
             help = 'File version added to the filenames .XXX.h5. If file_version==None'
-            ' then file_version will be incremented by one from the previous file. If no'
-            ' file exists then it starts with 1. default=None' )
+            ' then file_version will be incremented by one from the previous existing file.'
+            'If no file exists then it starts with 1. In the --upload mode when file_version'
+            'is None(default) then files with the latest version are used. default=None' )
     args = parser.parse_args()
 
     # make sure input experiment path exists
