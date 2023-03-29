@@ -818,17 +818,42 @@ class BatchExperiment:
             self.fileSection = 'File%i' % (fileNum + 1)
             # see if links to images are desired
             numLinks = 0
+            # Since Madrigal3 doesn't allow for different plots/docs for different
+            # the link to plots will be links to pages that will contain links
+            # inside realated to each plot
+            hdf5Filename = self.__iniData__.get(self.fileSection, 'hdf5Filename')
+            image_dict = dict()
             while True:
                 try:
                     imageTitle = self.__iniData__.get(self.fileSection,
                         'imageTitle%i' % (numLinks + 1))
                     image = self.__iniData__.get(self.fileSection,
                         'image%i' % (numLinks + 1))
-                    self.createLink(imageTitle, image, OutPath)
-                    logging.info('Created link with file %s' % (image))
+                    if 'Geometry Plot' is in imageTitle:
+                        # Only figures like geometry plot will be
+                        #links on their own
+                        self.createLink(imageTitle, image, OutPath)
+                        logging.info('Created link with file %s' % (image))
+                    else:
+                        if imageTitle not in image_dict.keys():
+                            image_dict.update({imageTitle:[]})
+                        image_dict[imageTitle].append(image)
                     numLinks += 1
                 except (configparser.NoSectionError, configparser.NoOptionError):
                     break
+            if len(image_dict.keys())>0:
+                self.createPlotLinks(hdf5Filename,image_dict, OutPath)
+
+    def createPlotLinks(self,hdf5Filename,image_dict, expPath):
+        """createPlotLinks is a method to create an html file associated
+        with each hdf5 file and links to groups of plots.
+
+        Inputs:
+            hdf5Filename - the file that the plots will be associated with
+            image_dict - a dictionary with plot types as keys and plot images
+                as items
+            expPath - path to experiment directory 
+        """
 
 
     def createLink(self,title,imageFile,expPath):
