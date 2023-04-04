@@ -43,6 +43,10 @@ def main():
             help='set for upload, rather than create from ini')
     parser.add_argument('--keepsrc',action='store_true',
             help='set for keeping the source files, otherwise they are removed.')
+    parser.add_argument('--skip_existing',action='store_true',
+            help='Skip the creation of madrigal files if already exists.')
+    parser.add_argument('--skip_doc_plots',action='store_true',
+            help='Skip the creation of extra docs and plots.')
     parser.add_argument('--DirNum', nargs='?', const=None, type=int, default=0, 
             help = 'sufix added to the folder experiments, default=0, '
             'e.g. DirNum=0 -> experiments0, if no arguments then DirNum==None -> experiments')
@@ -80,6 +84,14 @@ def main():
         removeSrcFiles = False
     else:
         removeSrcFiles = True
+    if args.skip_existing:
+        skip_existing = True
+    else:
+        skip_existing = False
+    if args.skip_doc_plots:
+        skip_doc_plots = True
+    else:
+        skip_doc_plots = False
     if args.upload:
         print("Uploading to Madrigal 3...")
         mad_batch.uploadExperiment(madrigal_ini,
@@ -89,6 +101,8 @@ def main():
     else:
         print("Converting to Madrigal 3...")
         mad_batch.createNewExperimentFromIni(madrigal_ini,
+                skip_existing=skip_existing,
+                skip_doc_plots=skip_doc_plots,
                 file_version=args.file_version)
     print("Done.")
 

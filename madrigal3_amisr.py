@@ -25,8 +25,9 @@ Modified 2022-08-14 Changed experiments for experiments0 as the folder to hold
 Modified 2023-02-15 change madFilename to include information about the radar
         mode, the integration time and the type of process,
         e.g. _lp_1min, or _vvels_5min - Pablo M. Reyes
-Modified 2023-02-16 bring experimentsDirNum outside uploadExperiment() so that one can specify the folder
-                    experiments0 like the place to save madrigal files - Pablo M. Reyes 
+Modified 2023-02-16 bring experimentsDirNum outside uploadExperiment() so that
+        one can specify the folder experiments0 like the place to save madrigal
+        files - Pablo M. Reyes 
 Modified 2023-03-20 Creating definition kindat2fname(kindat) in order to help
         with filename formatting. - P. M. Reyes
         # e.g. _lp_fit_5min
@@ -36,6 +37,7 @@ Modified 2023-03-20 Creating definition kindat2fname(kindat) in order to help
         Adding file_version to createNewExperimentFromIni and uploadExperiment
         in order to add a file_version.
 """
+#.......10........20........30........40........50........60........70........80
 
 import os
 import sys
@@ -562,14 +564,11 @@ class BatchExperiment:
                             'imageTitle%i' % (numLinks + 1))
                     image = self.__iniData__.get(self.fileSection,
                             'image%i' % (numLinks + 1))
-                    if 'Geometry Plot' in imageTitle:
-                        self.createLink(imageTitle, image, expPath)
-                        logging.info('Created link with file %s' % (image))
-                    else:
-                        if imageTitle not in image_dict.keys():
-                            image_dict.update({imageTitle:[]})
-                        image_dict[imageTitle].append(image)
-                        logging.info(f'Including image {image}')
+                    #if 'Geometry Plot' in imageTitle:
+                    if imageTitle not in image_dict.keys():
+                        image_dict.update({imageTitle:[]})
+                    image_dict[imageTitle].append(image)
+                    logging.info(f'Including image {image}')
                     numLinks += 1
                 except (configparser.NoSectionError, configparser.NoOptionError):
                     break
@@ -586,7 +585,8 @@ class BatchExperiment:
 
 
 
-    def createNewExperimentFromIni(self, iniFile, file_version = 1):
+    def createNewExperimentFromIni(self, iniFile, skip_existing=False,
+               skip_doc_plots=False, file_version = 1):
         """createNewExperimentFromIni will try to create a single new Madrigal experiment using
         information parsed from an input ini file.
 
@@ -796,9 +796,6 @@ class BatchExperiment:
                 madFilename = madFilenameTemplate + kindat2fname(kindat)\
                     + f'.{file_version:03d}.h5'
                 fullMadFilename = os.path.join(OutPath,madFilename)
-                if os.path.exists(fullMadFilename):
-                    print('Skipping file %s - already exists\n' % madFilename)
-                    continue
             elif type(file_version) == type(None):
                 for fcount in range(1,1000):
                     madFilename = madFilenameTemplate + kindat2fname(kindat)\
@@ -850,44 +847,29 @@ class BatchExperiment:
                         'imageTitle%i' % (numLinks + 1))
                     image = self.__iniData__.get(self.fileSection,
                         'image%i' % (numLinks + 1))
-                    if 'Geometry Plot' not in imageTitle:
-                        if imageTitle not in image_dict.keys():
-                            image_dict.update({imageTitle:[]})
-                        image_dict[imageTitle].append(image)
+                    if imageTitle not in image_dict.keys():
+                        image_dict.update({imageTitle:[]})
+                    image_dict[imageTitle].append(image)
                     numLinks += 1
                 except (configparser.NoSectionError, configparser.NoOptionError):
                     break
             if len(image_dict.keys())>0:
                 plots_links_dict.update({madFilename:[image_dict, OutPath]})
-                #self.createPlotLinks(madFilename,image_dict, OutPath)
 
         # all file info has been gathered - kick off multiprocessing
         print('Processing %i files' % (len(args)))
         for i,arg in enumerate(args):
             print("...working on file %d: %s" % (i+1,arg[1]))
-            createMad3File(arg)
+            if skip_existing and os.path.exists(arg[4]):
+                print('Skipping file %s - already exists\n' % arg[4])
+                continue
+            else:
+                createMad3File(arg)
 
-        # separate loop for links when complete
-        for fileNum in range(numFiles):
-            print('Creating other docs links...')
-            self.fileSection = 'File%i' % (fileNum + 1)
-            # see if links to images are desired
-            numLinks = 0
-            while True:
-                try:
-                    imageTitle = self.__iniData__.get(self.fileSection,
-                        'imageTitle%i' % (numLinks + 1))
-                    image = self.__iniData__.get(self.fileSection,
-                        'image%i' % (numLinks + 1))
-                    if 'Geometry Plot' in imageTitle:
-                        self.createLink(imageTitle, image, OutPath)
-                        logging.info('Created link with file %s' % (image))
-                    numLinks += 1
-                except (configparser.NoSectionError, configparser.NoOptionError):
-                    break
-        print('Creating plot links...')
-        for madfname, [image_dict, OutPath] in plots_links_dict.items():
-            self.createPlotLinks(madfname,image_dict, OutPath)
+        if not skip_doc_plots:
+            print('Creating plot links...')
+            for madfname, [image_dict, OutPath] in plots_links_dict.items():
+                self.createPlotLinks(madfname,image_dict, OutPath)
 
     def createPlotLinks(self,hdf5Filename,image_dict, expPath):
         """createPlotLinks is a method to create an html file associated
@@ -921,15 +903,15 @@ class BatchExperiment:
             os.mkdir(os.path.join(expPath, 'plots'))
 
 
-        file_links_html = f"""<html><head>
+        f_links_html = f"""<html><head>
         <TITLE>Plots associated with : {hdf5Filename}</TITLE>
         """
-        file_links_html += """
+        f_links_html += """
         <style>
             div.gallery {
-              margin: 3px;
+              margin: 2px;
               border: 1px solid #ccc;
-              width: 300px;
+              width: 400px;
               float: left;
             }
 
@@ -938,40 +920,53 @@ class BatchExperiment:
             }
 
             div.gallery img {
-              width: 50%;
+              width: 45%;
               height: auto;
             }
 
             div.desc {
-              width: 50%;
+              width: 55%;
               float: right;
+              font-size : 14px;
               text-align: center;
             }
             div.rowDiv {
               overflow: hidden; /* add this to contain floated children */
             }
+            h4 {
+               margin-top: 2px ;
+               margin-bottom: 0 ;
+            }
         </style>
         </head> <body>
         """
-        #<ul> Plots associated with : {hdf5Filename}
-        #for imageTitle,imagefile in image_dict.items():
-        #    file_links_html += f'         <li><a href="plots">{imageTitle}</a></li>'
-        #file_links_html +="""
-        #</ul>
-        file_links_html += f'<h3>Plots associated with : {hdf5Filename}</h3>\n'
+        f_links_html += f'<h4>Plots associated with : {hdf5Filename}</h4>\n'
         for imageTitle,imagefiles in image_dict.items():
-            file_links_html += f'    <div class="rowDiv">\n'
-            file_links_html += f'      <h4>{imageTitle}</h4>\n'
+            if "Geometry Plot" in imageTitle:
+                assert len(image_dict) >1, "Need other plots, not only Geometry."
+                assert len(imagefiles) == 1, f"So far, {imageTitle} expects 1 fig"
+                logging.info("Creating link for imageTitle.")
+                self.createLink(hdf5Filename,imageTitle,imagefiles[0],expPath,
+                                  plotBasenames = [plotName])
+                continue
+            f_links_html += f'    <div class="rowDiv">\n'
+            f_links_html += f'      <h4>{imageTitle.split(" ",1)[1]}</h4>\n'
             for imageFile in imagefiles:
-                imageFileBasename = os.path.basename(imageFile)
-                outName = os.path.join(expPath, 'plots',imageFileBasename)
+                imgFileBase = os.path.basename(imageFile)
+                # change base with madrigal fname
+                uniquename = imgFileBase.split(imageTitle.split(" ",1)[0],1)[-1]
+                imgFileBase = hdf5Filename.rsplit('.',1)[0] + " " + uniquename
+                outName = os.path.join(expPath, 'plots',imgFileBase)
+
                 if os.path.exists(outName):
-                    imageFileTrailing = imageFileBasename.rsplit('.',1)
+                    imageFileTrailing = imgFileBase.rsplit('.',1)
                     imgNum=1
 
                     while True:
-                        outName = '%s-%i.%s' % (imageFileTrailing[0],imgNum,imageFileTrailing[1])
-                        if not os.path.exists(os.path.join(expPath, 'plots',outName)):
+                        outName = '%s-%i.%s' % (imageFileTrailing[0],imgNum,
+                                                imageFileTrailing[1])
+                        if not os.path.exists(os.path.join(expPath, 'plots',
+                                                                outName)):
                             break
                         imgNum+=1
 
@@ -983,28 +978,32 @@ class BatchExperiment:
                 except:
                     pass
                 image_link = os.path.basename(outName)
-                file_links_html +=  '     <div class="gallery">\n'
-                file_links_html += f'      <a target="_self" href="plots/{image_link}">\n'
-                file_links_html += f'        <img src="plots/{image_link}">\n'
-                file_links_html +=  '        </a>\n'
-                file_links_html += f'        <div class="desc">{image_link}"</div>\n'
-                file_links_html += '     </div>\n'
-            file_links_html += '    </div>\n\n'
+                f_links_html +=  '   <div class="gallery">\n'
+                f_links_html += f'    <a target="_blank" href="plots/{image_link}">\n'
+                f_links_html += f'      <img src="plots/{image_link}">\n'
+                f_links_html +=  '      </a>\n'
+                f_links_html += f'      <div class="desc">{image_link}</div>\n'
+                f_links_html += '   </div>\n'
+            f_links_html += '    </div>\n\n'
 
-        file_links_html +="""
+        f_links_html +="""
         </body></html>
         """
 
         with open(os.path.join(expPath, plotName), 'w') as f:
-            f.write(file_links_html)
+            f.write(f_links_html)
 
-    def createLink(self,title,imageFile,expPath):
-        """createLink is a method to create a new html file in expPath with a link to an image file.
+#.......10........20........30........40........50........60........70........80
+    def createLink(self,hdf5Filename,imageTitle,imageFile,expPath, plotBasenames = []):
+        """createLink is a method to create a new html file in expPath with a
+           link to an image file.
 
         Inputs:
-            title - title of plot (will show up in Madrigal)
+            hdf5Filename - the file that the plots will be associated with
+            imageTitle - title of plot (will show up in Madrigal)
             imageFile - external image to be copied and displayed in Madrigal
             expPath - path to experiment directory
+            plotBasenames - list of plot names to avoid
         """
 
         templateHtml = """<html><head>
@@ -1013,7 +1012,6 @@ class BatchExperiment:
         """
 
         # get a unique filename
-        plotBasenames = []
         plotFiles = glob.glob(os.path.join(expPath, 'plot*.html'))
 
         for plotFile in plotFiles:
@@ -1031,15 +1029,21 @@ class BatchExperiment:
         if not os.path.exists(os.path.join(expPath, 'plots')):
             os.mkdir(os.path.join(expPath, 'plots'))
 
-        imageFileBasename = os.path.basename(imageFile)
-        outName = os.path.join(expPath, 'plots',imageFileBasename)
+        imgFileBase = os.path.basename(imageFile)
+        # change base with madrigal fname
+        uniquename = imgFileBase.split(imageTitle.split(" ",1)[0],1)[-1]
+        if uniquename[0] not in ['-','_']:
+            uniquename = "_" + uniquename
+        imgFileBase = hdf5Filename.rsplit('.',1)[0] + uniquename
+        outName = os.path.join(expPath, 'plots',imgFileBase)
 
         if os.path.exists(outName):
-            imageFileTrailing = imageFileBasename.rsplit('.',1)
+            imageFileTrailing = imgFileBase.rsplit('.',1)
             imgNum=1
 
             while True:
-                outName = '%s-%i.%s' % (imageFileTrailing[0],imgNum,imageFileTrailing[1])
+                outName = '%s-%i.%s' % (imageFileTrailing[0],imgNum,
+                                                imageFileTrailing[1])
                 if not os.path.exists(os.path.join(expPath, 'plots',outName)):
                     break
                 imgNum+=1
@@ -1052,8 +1056,11 @@ class BatchExperiment:
         except:
             pass
 
-        with open(os.path.join(expPath, plotName), 'w') as f:
-            f.write(templateHtml % (title, os.path.basename(outName)))
+        output_file = os.path.join(expPath, plotName)
+        logging.info(f"Saving file {output_file}")
+        plot_title = hdf5Filename.rsplit('.',1)[0] + " " + imageTitle.split(" ",1)[1]
+        with open(output_file, 'w') as f:
+            f.write(templateHtml % (plot_title, os.path.basename(outName)))
 
 
 class analyzeHdf5:
