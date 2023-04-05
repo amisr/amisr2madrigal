@@ -30,9 +30,6 @@ def main():
     # 2) gzip is used by madrigal conversion and gzip tries to change permissions if
     #    the user running the script doesn't match the user of the directory and this
     #    permission change fails causing the madrigal conversion to fail.
-    executing_user = pwd.getpwuid(os.getuid())[0]
-    if executing_user != 'transport':
-        raise Exception('This code must be executed using the "transport" user.')
 
     # command line interface
     parser = argparse.ArgumentParser(description='Converts and uploads AMISR fitted '
@@ -93,6 +90,10 @@ def main():
     else:
         skip_doc_plots = False
     if args.upload:
+        executing_user = pwd.getpwuid(os.getuid())[0]
+        if executing_user != 'transport':
+            raise Exception('To upload to madrigal this code must be executed'
+                    ' using the "transport" user.')
         print("Uploading to Madrigal 3...")
         mad_batch.uploadExperiment(madrigal_ini,
                 file_version=args.file_version,
