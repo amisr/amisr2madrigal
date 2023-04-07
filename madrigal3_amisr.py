@@ -601,6 +601,8 @@ class BatchExperiment:
 
             self.expPath = expPath
 
+        # create link to ISR AMISR database
+        self.createLinkBack2amisr(self.instrument,ExperimentName,expPath)
         #return(expPath)
 
 
