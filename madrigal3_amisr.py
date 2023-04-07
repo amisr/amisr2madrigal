@@ -274,6 +274,26 @@ def uploadMadrigalExp(madAdminObj,fullMadFilename,expTitle,
 
     return expPath
 
+def get_unique_fname(expPath, plotBasenames = []):
+    """
+    Routine to get a unique plotX.html file name.
+    """
+    plotFiles = glob.glob(os.path.join(expPath, 'plot*.html'))
+
+    for plotFile in plotFiles:
+        plotBasenames.append(os.path.basename(plotFile))
+
+    plotNum = 0
+    while True:
+        plotName = 'plot%i.html' % (plotNum)
+
+        if plotName not in plotBasenames:
+            break
+
+        plotNum += 1
+
+    return plotName, plotBasenames
+
 def createMad3File(args):
     """createMad3File is the method creates a single Madrigal 3 in parallel.
 
@@ -870,6 +890,35 @@ class BatchExperiment:
             print('Creating plot links...')
             for madfname, [image_dict, OutPath] in plots_links_dict.items():
                 self.createPlotLinks(madfname,image_dict, OutPath)
+            self.createLinkBack2amisr(self.instrument,ExperimentName,OutPath)
+    # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    # def createNewExperimentFromIni
+
+    def createLinkBack2amisr(self,instrument,Experiment,expPath):
+        """
+        Create a link to the amisr.com page of the current Experiment
+
+        Inputs:
+            instrument -  int, instrument code e.g. 61 for PFISR
+            Experiment - YYYYMMDD.XXX unique AMISR experiment name
+            expPath - path to experiment directory
+        """
+        # get a unique filename
+        plotName, plotBasenames = get_unique_fname(expPath)
+        baseurl = "https://data.amisr.com/database/"
+        amisr_isr_database = f"{baseurl}{instrument}/experiment/{Experiment}/3/"
+        output_file = os.path.join(expPath, plotName)
+        logging.info(f"Saving file {output_file}")
+        with open(output_file, 'w') as f:
+            f.write(f"""<html><head>
+              <TITLE>AMISR ISR Database</TITLE>
+              <meta http-equiv="refresh" content="0; url='{amisr_isr_database}'" />
+             </head>
+             <body>
+               <p>You will be redirected to data.amisr.com soon!</p>
+             </body>
+            </html>
+            """)
 
     def createPlotLinks(self,hdf5Filename,image_dict, expPath):
         """createPlotLinks is a method to create an html file associated
@@ -884,20 +933,7 @@ class BatchExperiment:
 
 
         # get a unique filename
-        plotBasenames = []
-        plotFiles = glob.glob(os.path.join(expPath, 'plot*.html'))
-
-        for plotFile in plotFiles:
-            plotBasenames.append(os.path.basename(plotFile))
-
-        plotNum = 0
-        while True:
-            plotName = 'plot%i.html' % (plotNum)
-
-            if plotName not in plotBasenames:
-                break
-
-            plotNum += 1
+        plotName, plotBasenames = get_unique_fname(expPath)
 
         if not os.path.exists(os.path.join(expPath, 'plots')):
             os.mkdir(os.path.join(expPath, 'plots'))
@@ -994,7 +1030,8 @@ class BatchExperiment:
             f.write(f_links_html)
 
 #.......10........20........30........40........50........60........70........80
-    def createLink(self,hdf5Filename,imageTitle,imageFile,expPath, plotBasenames = []):
+    def createLink(self,hdf5Filename,imageTitle,imageFile,expPath,
+            plotBasenames = []):
         """createLink is a method to create a new html file in expPath with a
            link to an image file.
 
@@ -1011,20 +1048,9 @@ class BatchExperiment:
         </head> <body><img src="plots/%s"></body></html>
         """
 
+
         # get a unique filename
-        plotFiles = glob.glob(os.path.join(expPath, 'plot*.html'))
-
-        for plotFile in plotFiles:
-            plotBasenames.append(os.path.basename(plotFile))
-
-        plotNum = 0
-        while True:
-            plotName = 'plot%i.html' % (plotNum)
-
-            if plotName not in plotBasenames:
-                break
-
-            plotNum += 1
+        plotName, plotBasenames  = get_unique_fname(expPath, plotBasenames)
 
         if not os.path.exists(os.path.join(expPath, 'plots')):
             os.mkdir(os.path.join(expPath, 'plots'))
