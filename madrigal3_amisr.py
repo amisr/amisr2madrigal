@@ -31,7 +31,7 @@ Modified 2023-02-16 bring experimentsDirNum outside uploadExperiment() so that
 Modified 2023-03-20 Creating definition kindat2fname(kindat) in order to help
         with filename formatting. - P. M. Reyes
         # e.g. _lp_fit_5min
-        # e.g. _bc_unfit_5min
+        # e.g. _bc_nenotr_5min
         # e.g. _5min-lp_vvels_5min
         # e.g. _1min-lp_vvels_5min
         Adding file_version to createNewExperimentFromIni and uploadExperiment
@@ -71,7 +71,7 @@ def kindat2fname(kindat):
     it = (kindat - 10000 * pc - 100 * pt)
 
     if pc == 100:
-        pc_desc = "unfit"
+        pc_desc = "nenotr"
     elif pc == 200:
         pc_desc = "fit"
     elif pc == 300:
@@ -117,7 +117,7 @@ def kindat2fname(kindat):
 
     return f"_{pt_desc}_{pc_desc}_{it_desc}" 
     # e.g. _lp_fit_5min
-    # e.g. _bc_unfit_5min
+    # e.g. _bc_nenotr_5min
     # e.g. _5min-lp_vvels_5min
     # e.g. _1min-lp_vvels_5min
 
