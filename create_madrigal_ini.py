@@ -301,7 +301,7 @@ class MadrigalIni():
             #pc_desc = 'Non-Fitted Uncorrected Electron Density'
             #pc_desc = 'Power-based Electron Density with Te=Ti'
             #pc_desc = 'Power-based Electron Density'
-            pc_desc = 'Non-Fitted Electron Density with Te=Ti'
+            pc_desc = 'Ne From Power with Te=Ti'
         elif kindat_type == 'standard':
             if sub_type in ['lp', 'ac', 'acfl']:
                 pc = 200
