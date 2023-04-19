@@ -38,8 +38,8 @@ def main():
             'e.g. /path/to/20210203.001, which must contain a Madrigal.ini file.')
     parser.add_argument('--upload',action='store_true',
             help='set for upload, rather than create from ini')
-    parser.add_argument('--keepsrc',action='store_true',
-            help='set for keeping the source files, otherwise they are removed.')
+    parser.add_argument('--keeptmp',action='store_true',
+            help='set for keeping the tmp files, otherwise they are removed.')
     parser.add_argument('--skip_existing',action='store_true',
             help='Skip the creation of madrigal files if already exists.')
     parser.add_argument('--skip_doc_plots',action='store_true',
@@ -77,10 +77,10 @@ def main():
 
     # Now take the experiment files and convert or upload them to Madrigal 3.
     mad_batch = madrigal3_amisr.BatchExperiment()
-    if args.keepsrc:
-        removeSrcFiles = False
+    if args.keeptmp:
+        removeTmpFiles = False
     else:
-        removeSrcFiles = True
+        removeTmpFiles = True
     if args.skip_existing:
         skip_existing = True
     else:
@@ -97,7 +97,7 @@ def main():
         print("Uploading to Madrigal 3...")
         mad_batch.uploadExperiment(madrigal_ini,
                 file_version=args.file_version,
-                removeSrcFiles=removeSrcFiles,
+                removeTmpFiles=removeTmpFiles,
                 experimentsDirNum=args.DirNum)
     else:
         print("Converting to Madrigal 3...")

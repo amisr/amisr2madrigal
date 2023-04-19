@@ -434,10 +434,10 @@ class BatchExperiment:
     __CEDAR_LEN__ = 80
 
     def uploadExperiment(self,iniFile,plotsdir='plots',file_version=1,
-            removeSrcFiles=True, experimentsDirNum=None):
+            removeTmpFiles=True, experimentsDirNum=None):
         """
         file_version : the 3 digit version attached to each file
-        removeSrcFiles : When True, remove file after uploading to Madrigal
+        removeTmpFiles : When True, remove tmp file after uploading to Madrigal
         """
 
         # create needed Madrigal objects
@@ -548,12 +548,12 @@ class BatchExperiment:
             fileDesc=status
 
             shutil.copyfile(fullMadFilename, os.path.join('/tmp',madFilename))
-            fullMadFilename=os.path.join('/tmp',madFilename)
+            tmpfullMadFilename=os.path.join('/tmp',madFilename)
 
             if fileNum==0:# create the experiment
                 try:
 
-                    expPath = uploadMadrigalExp(madAdminObj,fullMadFilename,
+                    expPath = uploadMadrigalExp(madAdminObj,tmpfullMadFilename,
                             expTitle,fileDesc,category,optChar,experimentsDirNum,
                             PI,PIEmail,fileAnalyst,fileAnalystEmail)
                 except IOError:
@@ -566,13 +566,13 @@ class BatchExperiment:
 
                     if info=='Yes':
                         distutils.dir_util.remove_tree(expPath+'/',verbose=1)
-                        expPath = uploadMadrigalExp(madAdminObj,fullMadFilename,
+                        expPath = uploadMadrigalExp(madAdminObj,tmpfullMadFilename,
                             expTitle,fileDesc,category,optChar,experimentsDirNum,
                             PI,PIEmail,fileAnalyst,fileAnalystEmail)
                     else:
                         raise IOError(y)
             else:
-                uploadMadrigalFile(madAdminObj,expPath,fullMadFilename,fileDesc,
+                uploadMadrigalFile(madAdminObj,expPath,tmpfullMadFilename,fileDesc,
                         category,fileAnalyst,fileAnalystEmail)
 
             # see if links to images are desired
@@ -595,9 +595,9 @@ class BatchExperiment:
             if len(image_dict.keys())>0:
                 self.createPlotLinks(madFilename,image_dict, expPath)
 
-            if removeSrcFiles:
-                logging.info(f'{fullMadFilename} has been uploaded. Removing it...')
-                os.remove(fullMadFilename)
+            if removeTmpFiles:
+                logging.info(f'{tmpfullMadFilename} has been uploaded. Removing tmp file ...')
+                os.remove(tmpfullMadFilename)
 
             self.expPath = expPath
 
