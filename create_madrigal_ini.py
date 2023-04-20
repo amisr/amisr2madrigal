@@ -34,6 +34,7 @@
 
 import os
 import re
+import csv
 import glob
 import configparser
 from argparse import ArgumentParser
@@ -124,7 +125,7 @@ class MadrigalIni():
              }
 
 
-    def __init__(self,radar,expdir_path):
+    def __init__(self,radar,expdir_path, specsfile ):
         # radar information
         self.radar = self.RADARS[radar]['name']
         self.instrument_number = self.RADARS[radar]['instrument_number']
@@ -140,6 +141,12 @@ class MadrigalIni():
         self.radarmode = os.path.basename(self.radarmode_path)
         self.datapath = os.path.dirname(os.path.dirname(self.expdir_path))
 
+        # specsfile if given will have information about category and file description
+        # similar to madrigal
+        self.specsfile = specsfile
+        self.getspecsfile()
+        print(self.specsfiledict)
+
         # initialize parameters used by 'add_file'
         self.filenum = 1
 
@@ -149,6 +156,24 @@ class MadrigalIni():
         # initialize config parser
         self.configfile = configparser.ConfigParser(delimiters=(':'),interpolation=None)
         self.configfile.optionxform = str
+
+    def getspecsfile(self):
+        """
+        Read a csv file with 3 columns: filename,category,filedescription
+        where category is the madrigal :
+        file.category (int) (1=default, 2=variant, 3=history, 4=real-time)
+        file description:
+        file.status (string)('preliminary', 'final', or any other description)
+        """
+        self.specsfiledict = {}
+        if type(self.specsfile) != type(None):
+            csvfile = self.specsfile[0]
+            with open(csvfile,'r') as fp:
+                csvFile = csv.reader(fp)
+                for line in csvFile:
+                    assert len(line) == 3
+                    self.specsfiledict.update({line[0]:dict(category=line[1],
+                                                        fileDesc=line[2])})
 
 
     def build(self):
@@ -253,12 +278,13 @@ class MadrigalIni():
         # http://cedar.openmadrigal.org/docs/name/rr_webServices.html
         # 4. file.category (int) (1=default, 2=variant, 3=history, 4=real-time)
         # 5. file.status (string)('preliminary', 'final', or any other description)
+        #    this later becomes fileDesc in madrigal upload
+        #    final is the file that shows by default in madrigal
+        # categ_3_prelim07Nov2014_YYYYMMDD.XXX_lp_IIIII-vvelsLat-geo-XXXsec.h5
+        # categ_3_prelim01May2014_YYYYMMDD.XXX_lp_IIIII-fitcal.h5
 
-        # categ.3.prelim07Nov2014.YYYYMMDD.XXX_lp_IIIII-vvelsLat-geo-XXXsec.h5
-        # categ.3.prelim01May2014.YYYYMMDD.XXX_lp_IIIII-fitcal.h5
-
-        if hdf5file.split('.')[0] == 'categ':
-            _, category, status = hdf5file.split('.')[:3]
+        if hdf5file.split('_')[0] == 'categ':
+            _, category, status = hdf5file.split('_')[:3]
 
         return status, category
 
@@ -541,6 +567,8 @@ def main():
     parser = ArgumentParser(description='Creates a "Madrigal.ini" file.')
     parser.add_argument("radar", help="The shortname of the radar.", choices=valid_radars)
     parser.add_argument("expdir", help="Path to the experiment directory, e.g. /Volumes/AMISR_PROCESSED/processed_data/PFISR/2021/01/MSWinds27H.v03/20210113.001")
+    parser.add_argument('--specsfile', nargs=1,
+            help='specsfile can be used to specify category and file description to a file')
     # Get arguments. Convert argparser Namespace class to dictionary
     args = vars(parser.parse_args())
     
@@ -551,7 +579,7 @@ def main():
         expdir = expdir[:-1]
 
     madrigal_ini_file = os.path.join(expdir,'Madrigal.ini')
-    madini = MadrigalIni(radar,expdir)
+    madini = MadrigalIni(radar,expdir,args['specsfile'])
     madini.build()
 
     print('Writing Madrigal.ini file...')
