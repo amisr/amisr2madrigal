@@ -285,7 +285,7 @@ def get_unique_fname(expPath, plotBasenames = []):
 
     plotNum = 0
     while True:
-        plotName = 'plot%i.html' % (plotNum)
+        plotName = 'plot%.3i.html' % (plotNum)
 
         if plotName not in plotBasenames:
             break
@@ -524,19 +524,21 @@ class BatchExperiment:
             kindat = int(self.__iniData__.get(self.fileSection, 'kindat'))
 
             if type(file_version) == int:
-                madFilename = madFilenameTemplate + kindat2fname(kindat)\
-                    + f'.{file_version:03d}.h5'
-                fullMadFilename = os.path.join(OutPath,madFilename)
+                ver2use = file_version
             elif type(file_version) == type(None):
                 # here should be the last version created
-                for fcount in range(999,0,-1):
-                    madFilename = madFilenameTemplate + kindat2fname(kindat)\
-                                + f'.{fcount:03d}.h5'
-                    fullMadFilename = os.path.join(OutPath,madFilename)
-                    if os.path.exists(fullMadFilename):
-                        break
+                allversions = sorted(glob.glob(os.path.join(OutPath,
+                    madFilenameTemplate + kindat2fname(kindat) + ".???.h5")))
+                if len(allversions)>0:
+                    ver2use = int(allversions[-1].split('.')[-2]) + 1
+                else:
+                    ver2use = 1
             else:
                 raise "file_version needs to be int or None."
+
+            madFilename = madFilenameTemplate + kindat2fname(kindat)\
+                + f'.{ver2use:03d}.h5'
+            fullMadFilename = os.path.join(OutPath,madFilename)
 
             print(f"working on file: {fullMadFilename}")
             if not os.path.exists(fullMadFilename):
