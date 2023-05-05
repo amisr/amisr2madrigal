@@ -142,7 +142,8 @@ def update_typetab(kindat,ckindat,typetab_file='/opt/madrigal/madrigal3/metadata
         existing_ckindats.append(ckindat)
         # sort them by kindat
         sorted_kindats = sorted(existing_kindats)
-        sorted_ckindats = [y for _, y in sorted(zip(existing_kindats, existing_ckindats), key=lambda pair: pair[0])]
+        sorted_ckindats = [y for _, y in sorted(zip(existing_kindats,
+                           existing_ckindats), key=lambda pair: pair[0])]
         with open(typetab_file,'w') as f:
             for kindat,ckindat in zip(sorted_kindats,sorted_ckindats):
                 f.write('%s,%s\n' % (str(kindat),ckindat))
@@ -837,7 +838,7 @@ class BatchExperiment:
             ckindat = self.__iniData__.get(self.fileSection, 'ckindat')
 
             # update the madrigal/metadata/typeTab.txt and madrigal/cachedFiles.ini files
-            update_typetab(kindat,ckindat)
+            update_typetab(kindat, ckindat)
             update_cachedfiles(self.instrument,kindat)
 
             try:

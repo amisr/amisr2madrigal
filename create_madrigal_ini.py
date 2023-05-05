@@ -37,6 +37,7 @@ import re
 import csv
 import glob
 import configparser
+import h5py
 from argparse import ArgumentParser
 
 def fname_seconds(x):
@@ -75,6 +76,19 @@ def pulsetype_order(x):
     """Assumes x has _bc_, _ac_, _acfl_, _lp_, or _mc_ in it """
     ptype = re.search(r"_[a-z][a-z]_|_[a-z][a-z][a-z][a-z]_",x).group() 
     return ["_bc_","_mc_","_ac_","_acfl_","_lp_"].index(ptype)
+
+class Fitted_Params():
+    def __init__(self,hdf5file):
+        self.hdf5file = hdf5file
+        self.read_params()
+
+    def read_params(self)
+        """Read some of the processing parameters
+        """
+        with h5py.File(self.hdf5file,'r') as fp:
+            self.ProcessingTimeStamp = fp['/ProcessingParams/ProcessingTimeStamp'][()].decode('latin')
+            self.fitter_version = fp['/ProcessingParams/FittingInfo/Version'][()].decode('latin')
+            self.ion_masses = fp['/FittedParams/IonMass'][:]
 
 class MadrigalIni():
     RADARS = {'pfisr': {'name': 'PFISR',
@@ -324,17 +338,18 @@ class MadrigalIni():
         # 300 - Resolved Velocity, Standard Latitude Bins
         if kindat_type == 'uncorrected_ne_only':
             pc = 100
-            #pc_desc = 'Non-Fitted Uncorrected Electron Density'
-            #pc_desc = 'Power-based Electron Density with Te=Ti'
-            #pc_desc = 'Power-based Electron Density'
-            pc_desc = 'Ne From Power with Te=Ti'
+            pc_desc = 'Ne From Power'
+            pc_desc_long = 'Ne From Power, not fitted and uncorrected, i.e. Tr=Te/Ti=1'
+
         elif kindat_type == 'standard':
+            fitted_params = Fitted_params(hdf5file)
             if sub_type in ['lp', 'ac', 'acfl']:
                 pc = 200
-                #pc_desc = 'Fitted Overspread Data Standard Config'
-                #pc_desc = 'Fitted with Standard Config'
-                #pc_desc = 'Fitted Data '
-                pc_desc = 'Fitted Overspread Data Standard Configuration'
+                pc_desc = 'Fitted'
+                pc_desc_long = f'Fitted with standard overspread code for ion masses: '\
+                        f"{', '.join(fitted_params.ion_masses.astype(str))}. This data"\
+                        f" product was produced on {fitted_params.ProcessingTimeStamp}"\
+                        f" with fitter version {fitted_params.fitter_version}."
             else:
                 raise Exception('Unknown/unsupported processed file type '\
                               '"%s" for file: %s' % (sub_type,hdf5file))
@@ -456,7 +471,7 @@ class MadrigalIni():
         desc = [x for x in [pc_desc,pt_desc,it_desc] if not x is None]
         ckindat = " - ".join(desc)
 
-        return tkindat, ckindat
+        return tkindat, dkindat, ckindat
 
 
     def add_file(self,kindat_type,hdf5file):
@@ -473,10 +488,11 @@ class MadrigalIni():
             path_template = '%(DataPath)s/%(ExperimentType)s/%(ExperimentName)s/derivedParams/vvelsLat/'
 
         # write the file information
-        tkindat, ckindat = self.determine_kindat(kindat_type,hdf5file)
+        tkindat, dkindat, ckindat = self.determine_kindat(kindat_type,hdf5file)
         status, category = self.determine_status_category(hdf5file)
         self.configfile.set(file_title,'hdf5Filename',path_template+hdf5file)
         self.configfile.set(file_title,'kindat',tkindat)
+        self.configfile.set(file_title,'dkindat',dkindat)
         self.configfile.set(file_title,'createRecPlots','True')
         self.configfile.set(file_title,'type',kindat_type)
         self.configfile.set(file_title,'ckindat',ckindat)
