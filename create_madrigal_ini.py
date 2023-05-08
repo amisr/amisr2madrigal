@@ -77,18 +77,39 @@ def pulsetype_order(x):
     ptype = re.search(r"_[a-z][a-z]_|_[a-z][a-z][a-z][a-z]_",x).group() 
     return ["_bc_","_mc_","_ac_","_acfl_","_lp_"].index(ptype)
 
-class Fitted_Params():
-    def __init__(self,hdf5file):
+class FileParams():
+    def __init__(self,hdf5file, kindat_type):
         self.hdf5file = hdf5file
+        self.kindat_type = kindat_type
         self.read_params()
 
-    def read_params(self)
+    def read_params(self):
         """Read some of the processing parameters
         """
-        with h5py.File(self.hdf5file,'r') as fp:
-            self.ProcessingTimeStamp = fp['/ProcessingParams/ProcessingTimeStamp'][()].decode('latin')
-            self.fitter_version = fp['/ProcessingParams/FittingInfo/Version'][()].decode('latin')
-            self.ion_masses = fp['/FittedParams/IonMass'][:]
+        if self.kindat_type in ['uncorrected_ne_only', 'standard']:
+            with h5py.File(self.hdf5file,'r') as fp:
+                self.read_ProcessingParams(fp)
+                self.fitter_version i\
+                        = fp['/ProcessingParams/FittingInfo/Version'][()].decode('latin')
+                self.ion_masses = fp['/FittedParams/IonMass'][:]
+
+        elif self.kindat_type == 'velocity':
+            with h5py.File(self.hdf5file,'r') as fp:
+                self.read_ProcessingParams(fp)
+                self.SourceFile = \
+                        fp['/ProcessingParams/SourceFile'][()].decode('latin')
+                self.IntegrationTime = fp['/ProcessingParams/IntegrationTime'][()]
+                self.MaxAlt = fp['/ProcessingParams/MaxAlt'][()]
+                self.MinAlt = fp['/ProcessingParams/MinAlt'][()]
+
+    def read_ProcessingParams(self, fp):
+        """Read ProcessingParams that are included in fitted and vvels files"""
+        self.ProcessingTimeStamp = \
+                fp['/ProcessingParams/ProcessingTimeStamp'][()].decode('latin')
+        self.PulseLength = fp['/ProcessingParams/PulseLength'][()]
+        self.BaudLength = fp['/ProcessingParams/BaudLength'][()]
+        self.TxFrequency = fp['/ProcessingParams/TxFrequency'][()]
+        self.RxFrequency = fp['/ProcessingParams/RxFrequency'][()]
 
 class MadrigalIni():
     RADARS = {'pfisr': {'name': 'PFISR',
@@ -304,6 +325,7 @@ class MadrigalIni():
 
     def determine_kindat(self,kindat_type,hdf5file):
 
+        extend_ckindat = ""
         # extract "sub"-type from hdf5file name
         pulse_type = hdf5file.split('_')[1]
         # bc, lp, ac
@@ -312,6 +334,7 @@ class MadrigalIni():
         int_time = os.path.splitext(hdf5file)[0].split('_')[2].split('-')[0]
         # e.g. 20230223.002_lp_5min-fitcal.h5 -> 5min
         # e.g. 20100529.002_lp_2min.h5 -> 2min
+        file_params = FileParams(hdf5file, kindat_type)
         if kindat_type in ['uncorrected_ne_only', 'standard']:
             sub_type = pulse_type
             # e.g. ac, lp, bc, mc
@@ -339,24 +362,25 @@ class MadrigalIni():
         if kindat_type == 'uncorrected_ne_only':
             pc = 100
             pc_desc = 'Ne From Power'
-            pc_desc_long = 'Ne From Power, not fitted and uncorrected, i.e. Tr=Te/Ti=1'
+            extend_ckindat += 'Ne derived from Power, not fitted and uncorrected, i.e. Tr=Te/Ti=1. '
+            extend_ckindat += f"Fitter version used: {file_params.fitter_version}. "
 
         elif kindat_type == 'standard':
-            fitted_params = Fitted_params(hdf5file)
             if sub_type in ['lp', 'ac', 'acfl']:
                 pc = 200
                 pc_desc = 'Fitted'
-                pc_desc_long = f'Fitted with standard overspread code for ion masses: '\
-                        f"{', '.join(fitted_params.ion_masses.astype(str))}. This data"\
-                        f" product was produced on {fitted_params.ProcessingTimeStamp}"\
-                        f" with fitter version {fitted_params.fitter_version}."
+                extend_ckindat += 'Fitted with standard overspread code for ion masses: '\
+                        f"{', '.join(file_params.ion_masses.astype(str))}. "\
+                extend_ckindat += f"Fitter version used: {file_params.fitter_version}. "
             else:
                 raise Exception('Unknown/unsupported processed file type '\
                               '"%s" for file: %s' % (sub_type,hdf5file))
         elif kindat_type == 'velocity':
             pc = 300
-            pc_desc = 'Resolved Velocity Standard Latitude Bins'
-            #pc_desc = 'Resolved Velocity'
+            pc_desc = 'Resolved Vel. Standard Lat. Bins'
+            extend_ckindat += 'Resolved Velocity with standard Latitude Bins. '\
+                    f"The source file used to derive this data product was: "\
+                    f"{file_params.SourceFile}. "\
         else:
             raise Exception('Unknown/unsupported file: %s' % (hdf5file))
 
@@ -368,33 +392,33 @@ class MadrigalIni():
         if kindat_type in ['uncorrected_ne_only', 'standard']:
             if sub_type == 'lp':
                 pt = 1
-                #pt_desc = "Long Pulse (F-region)"
-                pt_desc = "F-region. Pulse type: Long Pulse (lp)."
+                pt_desc = "Long Pulse (F-region)"
+                extend_ckindat += "Pulse type: Uncoded long pulse (LP) to resolve "\
+                        "the F-region. "
             elif sub_type in ['ac','acfl']:
                 pt = 2
-                #pt_desc = "Alternating Code (E-region bottom F-region)"
-                #pt_desc = "E-region (Alternating Codes)"
-                pt_desc = "E-region and bottom F-region. Pulse type: Alternating Codes (ac/acfl)."
+                pt_desc = "Alternating Code (E-region)"
+                extend_ckindat += "Pulse type: Alternating Code (AC) to resolve "\
+                        "the E-region and the lower F-region. "
             elif sub_type in ['bc','mc']:
                 pt = 3
-                #pt_desc = "Barker/MPS Code (D-region bottom E-region)"
-                #pt_desc = "D-region (Barker/MPS Code)"
-                pt_desc = "D-region and bottom E-region. Pulse type: Barker/MPS Code (bc/mc)."
+                pt_desc = "Barker/MPS Code (D-region)"
+                extend_ckindat += "Pulse type: Barker or other binary code  to resolve "\
+                        "the D-region and the lower E-region. "
             else:
                 raise Exception('Unknown/unsupported pulse type: %s' % (sub_type))
         elif kindat_type == 'velocity':
             #pt = 0
-            #pt_desc = None
             pulse_type,base_intg = sub_type.split('-')
             if  pulse_type == 'lp':
                 pt = 10
                 pt_desc = "F-region"
             elif pulse_type in ['ac','acfl']:
                 pt = 30
-                pt_desc = "E-region and bottom F-region"
+                pt_desc = "E-region"
             elif pulse_type in ['bc','mc']:
                 pt = 50
-                pt_desc = "D-region and bottom E-region"
+                pt_desc = "D-region"
 
             if base_intg == "1min":
                 pt += 1
@@ -411,8 +435,9 @@ class MadrigalIni():
             elif base_intg == "20min":
                 pt += 7
 
-            pt_desc = f"based on {base_intg} integrated {pulse_type} ({pt_desc}) fitted data."
-
+            pt_desc = f"{base_intg}_{pulse_type}_{pt_desc}"
+            extend_ckindat += f"This derived product is based on a {pulse_type} (pt_desc)"\
+                    f"experiment  with integration time {base_intg} "
         else:
             raise Exception('Unknown/unsupported file: %s' % (hdf5file))
 
@@ -422,8 +447,10 @@ class MadrigalIni():
 
         # integration time
         # 1 - 1 minute
+        # 2 - 2 minute
         # 3 - 3 minute
-        # 4 - 5 minute
+        # 4 - 4 minute
+        # 5 - 5 minute
         # 5 - 10 minute
         # 6 - 15 minute
         # 7 - 20 minute
@@ -463,7 +490,8 @@ class MadrigalIni():
         else:
             raise Exception('Unknown/unsupported integration time: %s' % (int_time))
 
-        it_desc = f"Final Integration time: {it_desc}."
+        #it_desc = f"Final Integration time: {it_desc}."
+        it_desc = f"{it_desc}"
         tkindat = pc * 10000 + pt * 100 + it
 
         tkindat = str(int(tkindat))
@@ -471,7 +499,11 @@ class MadrigalIni():
         desc = [x for x in [pc_desc,pt_desc,it_desc] if not x is None]
         ckindat = " - ".join(desc)
 
-        return tkindat, dkindat, ckindat
+        extend_ckindat += f"The final integration time is {it_desc}. "\
+        extend_ckindat += f"This data product was generated on "\
+                f"{file_params.ProcessingTimeStamp}."
+
+        return tkindat, extend_ckindat, ckindat, file_params
 
 
     def add_file(self,kindat_type,hdf5file):
@@ -488,14 +520,17 @@ class MadrigalIni():
             path_template = '%(DataPath)s/%(ExperimentType)s/%(ExperimentName)s/derivedParams/vvelsLat/'
 
         # write the file information
-        tkindat, dkindat, ckindat = self.determine_kindat(kindat_type,hdf5file)
+        tkindat, extend_ckindat, ckindat, file_params = self.determine_kindat(
+                kindat_type,hdf5file)
         status, category = self.determine_status_category(hdf5file)
         self.configfile.set(file_title,'hdf5Filename',path_template+hdf5file)
         self.configfile.set(file_title,'kindat',tkindat)
-        self.configfile.set(file_title,'dkindat',dkindat)
+        self.configfile.set(file_title,'extend_ckindat',extend_ckindat)
         self.configfile.set(file_title,'createRecPlots','True')
         self.configfile.set(file_title,'type',kindat_type)
         self.configfile.set(file_title,'ckindat',ckindat)
+        if kindat_type in ['velocity']:
+            self.configfile.set(file_title,'source_file', file_params.SourceFile)
 
         self.configfile.set(file_title,'status', status) # 'final')
         self.configfile.set(file_title,'category', category) #,'1')
