@@ -327,6 +327,14 @@ def createMad3File(args):
         try: history = iniData.get(fileSection, 'history')
         except: history = None
 
+        if not hdf5Filename is None:
+            if not comments is None:
+                comments = comments + '\n' + 'SOURCE_FILE %s' % (
+                        os.path.basename(hdf5Filename))
+            else:
+                comments = 'SOURCE_FILE %s' % (
+                        os.path.basename(hdf5Filename))
+
         print("Creating Madrigal Catalog Header...")
         now = datetime.datetime.now()
         catHeadObj = madrigal.cedar.CatalogHeaderCreator(tempfile_name)

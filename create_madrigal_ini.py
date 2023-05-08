@@ -503,7 +503,7 @@ class MadrigalIni():
         extend_ckindat += f"This data product was generated on "\
                 f"{file_params.ProcessingTimeStamp}."
 
-        return tkindat, extend_ckindat, ckindat, file_params
+        return tkindat, extend_ckindat, ckindat
 
 
     def add_file(self,kindat_type,hdf5file):
@@ -520,7 +520,7 @@ class MadrigalIni():
             path_template = '%(DataPath)s/%(ExperimentType)s/%(ExperimentName)s/derivedParams/vvelsLat/'
 
         # write the file information
-        tkindat, extend_ckindat, ckindat, file_params = self.determine_kindat(
+        tkindat, extend_ckindat, ckindat = self.determine_kindat(
                 kindat_type,hdf5file)
         status, category = self.determine_status_category(hdf5file)
         self.configfile.set(file_title,'hdf5Filename',path_template+hdf5file)
@@ -529,8 +529,6 @@ class MadrigalIni():
         self.configfile.set(file_title,'createRecPlots','True')
         self.configfile.set(file_title,'type',kindat_type)
         self.configfile.set(file_title,'ckindat',ckindat)
-        if kindat_type in ['velocity']:
-            self.configfile.set(file_title,'source_file', file_params.SourceFile)
 
         self.configfile.set(file_title,'status', status) # 'final')
         self.configfile.set(file_title,'category', category) #,'1')
