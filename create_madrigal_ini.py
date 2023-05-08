@@ -87,9 +87,10 @@ class FileParams():
         """Read some of the processing parameters
         """
         if self.kindat_type in ['uncorrected_ne_only', 'standard']:
+            print(f"Reading parameters from file {self.hdf5file}")
             with h5py.File(self.hdf5file,'r') as fp:
                 self.read_ProcessingParams(fp)
-                self.fitter_version i\
+                self.fitter_version \
                         = fp['/ProcessingParams/FittingInfo/Version'][()].decode('latin')
                 self.ion_masses = fp['/FittedParams/IonMass'][:]
 
@@ -229,46 +230,46 @@ class MadrigalIni():
         # if no -fitcal or -cal files, error out.
         if len(fitted_h5files) == 0:
             raise Exception("No '*-fitcal.h5' nor '*-cal.h5' files found.")
-        fitted_h5files = [os.path.basename(x) for x in fitted_h5files]
+        #fitted_h5files = [os.path.basename(x) for x in fitted_h5files]
 
         #history_h5files = sorted(glob.glob(os.path.join(self.expdir_path,'categ.*.h5')))
         history_h5files = sorted(glob.glob(os.path.join(self.expdir_path,'*-cal.h5')))
-        history_h5files = [os.path.basename(x) for x in history_h5files]
+        #history_h5files = [os.path.basename(x) for x in history_h5files]
 
         # look for vvels files
-        vvels_h5files = sorted(glob.glob(os.path.join(self.expdir_path,'derivedParams/vvelsLat','*.h5'))
+        vvels_h5files = sorted(glob.glob(os.path.join(self.expdir_path,
+            'derivedParams/vvelsLat','*.h5'))
                                     , key =lambda x: fname_seconds(x))
-        vvels_h5files = [os.path.basename(x) for x in vvels_h5files]
+        #vvels_h5files = [os.path.basename(x) for x in vvels_h5files]
 
         # Now let's build the Madrigal.ini file
         h5files = fitted_h5files + vvels_h5files + history_h5files
+
+        file_counter = 0
         num_h5files = len(h5files)
 
-        for h5file in h5files:
-            if h5file.split('_')[1] == 'bc':
-                print('Working on file : %s' % (h5file))
-                if h5file in fitted_h5files + history_h5files:
-                    self.add_file('uncorrected_ne_only',h5file)
+        ptype2do = "bc"
+        for h5file in fitted_h5files + history_h5files:
+            if os.path.basename(h5file).split('_')[1] == ptype2do:
+                print('Working on file %d/%d: %s' % (file_counter+1,
+                    num_h5files,h5file))
+                file_counter += 1
+                self.add_file('uncorrected_ne_only',h5file)
 
         for ptype2do in ['ac','lp']:
-            for h5file in h5files:
-                if h5file.split('_')[1] == ptype2do:
-                    print('Working on standard file %s' % (h5file))
-                    if h5file in fitted_h5files + history_h5files:
-                        self.add_file('uncorrected_ne_only',h5file)
-                        self.add_file('standard',h5file)
-           # Lets keep uncorrected and standard together, so don't do
-           # this:
-           # for h5file in h5files:
-           #     if h5file.split('_')[1] == ptype2do:
-           #         print('Working on uncorrected file %s' % (h5file))
-           #         if h5file in fitted_h5files + history_h5files:
-           #             self.add_file('uncorrected_ne_only',h5file)
+            for h5file in fitted_h5files + history_h5files:
+                if os.path.basename(h5file).split('_')[1] == ptype2do:
+                    print('Working on file %d/%d: %s' % (file_counter+1,
+                        num_h5files,h5file))
+                    file_counter += 1
+                    self.add_file('uncorrected_ne_only',h5file)
+                    self.add_file('standard',h5file)
 
-        for i,h5file in enumerate(h5files):
-            if h5file in vvels_h5files:
-                print('Working on file %d/%d: %s' % (i+1,num_h5files,h5file))
-                self.add_file('velocity',h5file)
+        for h5file in vvels_h5files:
+            print('Working on file %d/%d: %s' % (file_counter+1,
+                    num_h5files,h5file))
+            file_counter += 1
+            self.add_file('velocity',h5file)
 
 
     def read_experiment_description(self):
@@ -323,7 +324,7 @@ class MadrigalIni():
 
         return status, category
 
-    def determine_kindat(self,kindat_type,hdf5file):
+    def determine_kindat(self,kindat_type,hdf5file, file_params):
 
         extend_ckindat = ""
         # extract "sub"-type from hdf5file name
@@ -334,7 +335,6 @@ class MadrigalIni():
         int_time = os.path.splitext(hdf5file)[0].split('_')[2].split('-')[0]
         # e.g. 20230223.002_lp_5min-fitcal.h5 -> 5min
         # e.g. 20100529.002_lp_2min.h5 -> 2min
-        file_params = FileParams(hdf5file, kindat_type)
         if kindat_type in ['uncorrected_ne_only', 'standard']:
             sub_type = pulse_type
             # e.g. ac, lp, bc, mc
@@ -369,8 +369,8 @@ class MadrigalIni():
             if sub_type in ['lp', 'ac', 'acfl']:
                 pc = 200
                 pc_desc = 'Fitted'
-                extend_ckindat += 'Fitted with standard overspread code for ion masses: '\
-                        f"{', '.join(file_params.ion_masses.astype(str))}. "\
+                extend_ckindat += "Fitted with standard overspread code for ion masses: " \
+                        f"{', '.join(file_params.ion_masses.astype(str))}. "
                 extend_ckindat += f"Fitter version used: {file_params.fitter_version}. "
             else:
                 raise Exception('Unknown/unsupported processed file type '\
@@ -380,7 +380,7 @@ class MadrigalIni():
             pc_desc = 'Resolved Vel. Standard Lat. Bins'
             extend_ckindat += 'Resolved Velocity with standard Latitude Bins. '\
                     f"The source file used to derive this data product was: "\
-                    f"{file_params.SourceFile}. "\
+                    f"{file_params.SourceFile}. "
         else:
             raise Exception('Unknown/unsupported file: %s' % (hdf5file))
 
@@ -436,8 +436,8 @@ class MadrigalIni():
                 pt += 7
 
             pt_desc = f"{base_intg}_{pulse_type}_{pt_desc}"
-            extend_ckindat += f"This derived product is based on a {pulse_type} (pt_desc)"\
-                    f"experiment  with integration time {base_intg} "
+            extend_ckindat += f"This derived product is based on a {pulse_type} ({pt_desc}) "\
+                    f"experiment  with integration time {base_intg}. "
         else:
             raise Exception('Unknown/unsupported file: %s' % (hdf5file))
 
@@ -499,14 +499,19 @@ class MadrigalIni():
         desc = [x for x in [pc_desc,pt_desc,it_desc] if not x is None]
         ckindat = " - ".join(desc)
 
-        extend_ckindat += f"The final integration time is {it_desc}. "\
+        extend_ckindat += f"The final integration time is {it_desc}. "
         extend_ckindat += f"This data product was generated on "\
                 f"{file_params.ProcessingTimeStamp}."
 
         return tkindat, extend_ckindat, ckindat
 
 
-    def add_file(self,kindat_type,hdf5file):
+    def add_file(self, kindat_type, hdf5file_fullpath):
+        """Add h5 file to the madrigal.ini file
+        """
+        file_params = FileParams(hdf5file_fullpath, kindat_type)
+
+        hdf5file = os.path.basename(hdf5file_fullpath)
         file_title = 'File%d' % (self.filenum)
         if not self.configfile.has_section(file_title):
             self.configfile.add_section(file_title)
@@ -521,7 +526,7 @@ class MadrigalIni():
 
         # write the file information
         tkindat, extend_ckindat, ckindat = self.determine_kindat(
-                kindat_type,hdf5file)
+                kindat_type, hdf5file, file_params)
         status, category = self.determine_status_category(hdf5file)
         self.configfile.set(file_title,'hdf5Filename',path_template+hdf5file)
         self.configfile.set(file_title,'kindat',tkindat)
