@@ -318,7 +318,7 @@ def createMad3File(args):
 
     # header
     if writeHeader:
-        try: kindatDesc = iniData.get(fileSection, 'ckindat')
+        try: kindatDesc = iniData.get(fileSection, 'extend_ckindat')
         except: kindatDesc = None
         try: analyst = iniData.get(fileSection, 'analyst')
         except: analyst = None
