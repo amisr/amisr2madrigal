@@ -65,6 +65,22 @@ import madrigal.admin
 WRITEHEADER = 1
 POOLSIZE = 8
 
+it2min = {
+        1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:7, 8:8, 9:9, 10:10, 11:11,
+        12:12, 13:13, 14:14, 15:15, 16:16, 17:17, 18:18, 19:19, 20:20,
+        25 : 30,
+        30 : 45,
+        35 : 60,
+        40 : 90,
+        45 : 120,
+        60 : 45/60,
+        64 : 30/60,
+        68 : 15/60,
+        72 : 10/60,
+        76 : 5/60,
+        80 : 4/60,
+}
+
 def kindat2fname(kindat):
     pc = kindat//10000
     pt = (kindat - 10000 * pc) // 100
@@ -77,49 +93,26 @@ def kindat2fname(kindat):
     elif pc == 300:
         pc_desc = "vvels"
 
-    if pc in [100,200]:
+    if pc in [100,200, 300]:
         if pt == 1:
             pt_desc = "lp" # long pulse
         elif pt == 2:
             pt_desc = "ac" # alternating code
         elif pt == 3:
             pt_desc = "bc" # binary code
-    elif pc in [300]:
-        if pt<30:
-            pt_desc = "lp"
-            base_it = pt-10
-        elif pt<50:
-            pt_desc = "ac"
-            base_it = pt-30
-        elif pt<70:
-            pt_desc = "bc"
-            base_it = pt-50
-        else:
-            raise f"pt={pt} for pc={pc} not implemented yet."
-        if base_it in [1,2,3]:
-            base_intg = f"{base_it:02d}min"
-        elif base_it in [4,5,6,7]:
-            base_intg = f"{5*(base_it-3):02d}min"
-        else:
-            raise f"base_it={base_it} for pc={pc}"
 
-        pt_desc = f"{base_intg}-{pt_desc}"  # e.g. 5min-lp
-    if it in [1,2,3]:
-        it_desc = f"{it:02d}min"
-    elif it in [4,5,6,7]:
-        it_desc = f"{5*(it-3):02d}min"
-    elif it == 8:
-        it_desc = "30sec"
-    elif it == 9:
-        it_desc = "15sec"
-    elif it == 10:
-        it_desc = "04sec"
+    intg_min = it2min[it]
+    if intg_min < 1:
+        it_desc = f"{int(intg_min * 60):02d}sec"
+    elif intg_min >= 1:
+        it_desc = f"{intg_min:02d}min"
+
 
     return f"_{pt_desc}_{pc_desc}_{it_desc}" 
-    # e.g. _lp_fit_5min
-    # e.g. _bc_nenotr_5min
-    # e.g. _5min-lp_vvels_5min
-    # e.g. _1min-lp_vvels_5min
+    # e.g. _lp_fit_05min
+    # e.g. _bc_nenotr_05min
+    # e.g. _lp_vvels_05min
+    # e.g. _lp_vvels_05min
 
 def update_typetab(kindat,ckindat,typetab_file='/opt/madrigal/madrigal3/metadata/typeTab.txt'):
     # read the existing kindats from the typeTab

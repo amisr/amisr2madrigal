@@ -40,6 +40,22 @@ import configparser
 import h5py
 from argparse import ArgumentParser
 
+min2it = {
+        1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:7, 8:8, 9:9, 10:10, 11:11,
+        12:12, 13:13, 14:14, 15:15, 16:16, 17:17, 18:18, 19:19, 20:20,
+        30   : 25,
+        45   : 30,
+        60   : 35,
+        90   : 40,
+        120  : 45,
+        45/60 : 60,
+        30/60 : 64,
+        15/60 : 68,
+        10/60 : 72,
+        5/60  : 76,
+        4/60  : 80,
+        }
+
 def fname_seconds(x):
     # old ones:
     #  THIS CASE IS NOT CONSIDERED, ONLY derivedParams/vvelsLat
@@ -427,24 +443,8 @@ class MadrigalIni():
         elif int_time[-3:] == "sec":
             intg_min = float(int_time.split('sec')[0])/60
 
-        intg_dict = {
-                1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:7, 8:8, 9:9, 10:10, 11:11,
-                12:12, 13:13, 14:14, 15:15, 16:16, 17:17, 18:18, 19:19, 20:20,
-                30   : 25,
-                45   : 30,
-                60   : 35,
-                90   : 40,
-                120  : 45,
-                45/60 : 60,
-                30/60 : 64,
-                15/60 : 68,
-                10/60 : 72,
-                5/60  : 76,
-                4/60  : 80,
-                }
-
         try:
-            it = intg_dict[intg_min]
+            it = min2it[intg_min]
         except:
             raise Exception('Unknown/unsupported integration time: %s' % (int_time))
 
