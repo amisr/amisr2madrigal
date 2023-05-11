@@ -92,6 +92,10 @@ def kindat2fname(kindat):
         pc_desc = "fit"
     elif pc == 300:
         pc_desc = "vvels"
+    else:
+        raise Exception(f'process type pc={pc} not available. '\
+                f'kindat = {kindat}. '\
+                f'valid values: 100,200,300')
 
     if pc in [100,200, 300]:
         if pt == 1:
@@ -100,6 +104,10 @@ def kindat2fname(kindat):
             pt_desc = "ac" # alternating code
         elif pt == 3:
             pt_desc = "bc" # binary code
+        else:
+            raise Exception(f'pulse type pt={pt} not available. '\
+                f'kindat = {kindat}. '\
+                    f'valid values: 1,2,3')
 
     intg_min = it2min[it]
     if intg_min < 1:
@@ -536,7 +544,7 @@ class BatchExperiment:
                 else:
                     ver2use = 1
             else:
-                raise "file_version needs to be int or None."
+                raise Exception("file_version needs to be int or None.")
 
             madFilename = madFilenameTemplate + kindat2fname(kindat)\
                 + f'.{ver2use:03d}.h5'
@@ -544,7 +552,7 @@ class BatchExperiment:
 
             print(f"working on file: {fullMadFilename}")
             if not os.path.exists(fullMadFilename):
-                raise f"file {fullMadFilename} does not exist."
+                raise Exception(f"file {fullMadFilename} does not exist.")
 
             hdf5Type = self.__iniData__.get(self.fileSection, 'type')
             status = self.__iniData__.get(self.fileSection, 'status')
@@ -830,7 +838,7 @@ class BatchExperiment:
                     if not os.path.exists(fullMadFilename):
                         break
             else:
-                raise "file_version needs to be int or None."
+                raise Exception("file_version needs to be int or None.")
 
             print(f"working on file: {fullMadFilename}")
 
