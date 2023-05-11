@@ -377,7 +377,7 @@ class MadrigalIni():
                               '"%s" for file: %s' % (sub_type,hdf5file))
         elif kindat_type == 'velocity':
             pc = 300
-            pc_desc = 'Resolved Vel. Standard Lat. Bins'
+            pc_desc = 'Resolved Velocity'
             extend_ckindat += 'Resolved Velocity with standard Latitude Bins. '\
                     f"The source file used to derive this data product was: "\
                     f"{file_params.SourceFile}. "
@@ -389,54 +389,27 @@ class MadrigalIni():
         # 1 - Long Pulse (F-region)
         # 2 - Alternating Code (E-region, bottom F-region)
         # 3 - Barker/MPS Code (D-region, bottom E-region)
-        if kindat_type in ['uncorrected_ne_only', 'standard']:
-            if sub_type == 'lp':
+        if kindat_type in ['uncorrected_ne_only', 'standard', 'velocity']:
+            if pulse_type == 'lp':
                 pt = 1
                 pt_desc = "Long Pulse (F-region)"
                 extend_ckindat += "Pulse type: Uncoded long pulse (LP) to resolve "\
                         "the F-region. "
-            elif sub_type in ['ac','acfl']:
+            elif pulse_type in ['ac','acfl']:
                 pt = 2
                 pt_desc = "Alternating Code (E-region)"
                 extend_ckindat += "Pulse type: Alternating Code (AC) to resolve "\
                         "the E-region and the lower F-region. "
-            elif sub_type in ['bc','mc']:
+            elif pulse_type in ['bc','mc']:
                 pt = 3
                 pt_desc = "Barker/MPS Code (D-region)"
                 extend_ckindat += "Pulse type: Barker or other binary code  to resolve "\
                         "the D-region and the lower E-region. "
             else:
                 raise Exception('Unknown/unsupported pulse type: %s' % (sub_type))
-        elif kindat_type == 'velocity':
-            #pt = 0
-            pulse_type,base_intg = sub_type.split('-')
-            if  pulse_type == 'lp':
-                pt = 10
-                pt_desc = "F-region"
-            elif pulse_type in ['ac','acfl']:
-                pt = 30
-                pt_desc = "E-region"
-            elif pulse_type in ['bc','mc']:
-                pt = 50
-                pt_desc = "D-region"
 
-            if base_intg == "1min":
-                pt += 1
-            elif base_intg == "2min":
-                pt += 2
-            elif base_intg == "3min":
-                pt += 3
-            elif base_intg == "5min":
-                pt += 4
-            elif base_intg == "10min":
-                pt += 5
-            elif base_intg == "15min":
-                pt += 6
-            elif base_intg == "20min":
-                pt += 7
-
-            pt_desc = f"{base_intg}_{pulse_type}_{pt_desc}"
-            extend_ckindat += f"This derived product is based on a {pulse_type} ({pt_desc}) "\
+            if kindat_type == 'velocity':
+                extend_ckindat += f"This derived product is based on {pt_desc} "\
                     f"experiment  with integration time {base_intg}. "
         else:
             raise Exception('Unknown/unsupported file: %s' % (hdf5file))
@@ -447,51 +420,39 @@ class MadrigalIni():
 
         # integration time
         # 1 - 1 minute
-        # 2 - 2 minute
-        # 3 - 3 minute
-        # 4 - 4 minute
-        # 5 - 5 minute
-        # 5 - 10 minute
-        # 6 - 15 minute
-        # 7 - 20 minute
-        # 8 - 30 seconds
-        # 9 - 15 seconds
-        # 10 - 4 seconds
-        if int_time in ['1min','60sec']:
-            it = 1
-            it_desc = '1 minute'
-        elif int_time in ['2min','120sec']:
-            it = 2
-            it_desc = '2 minutes'
-        elif int_time in ['3min','180sec']:
-            it = 3
-            it_desc = '3 minutes'
-        elif int_time in ['5min','300sec']:
-            it = 4
-            it_desc = '5 minutes'
-        elif int_time in ['10min','600sec']:
-            it = 5
-            it_desc = '10 minutes'
-        elif int_time in ['15min','900sec']:
-            it = 6
-            it_desc = '15 minutes'
-        elif int_time in ['20min','1200sec']:
-            it = 7
-            it_desc = '20 minutes'
-        elif int_time == '30sec':
-            it = 8
-            it_desc = '30 seconds'
-        elif int_time == '15sec':
-            it = 9
-            it_desc = '15 seconds'
-        elif int_time == '4sec':
-            it = 10
-            it_desc = '4 seconds'
-        else:
+
+
+        if int_time[-3:] == "min":
+            intg_min = int(int_time.split('min')[0])
+        elif int_time[-3:] == "sec":
+            intg_min = float(int_time.split('sec')[0])/60
+
+        intg_dict = {
+                1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:7, 8:8, 9:9, 10:10, 11:11,
+                12:12, 13:13, 14:14, 15:15, 16:16, 17:17, 18:18, 19:19, 20:20,
+                30   : 25,
+                45   : 30,
+                60   : 35,
+                90   : 40,
+                120  : 45,
+                45/60 : 60,
+                30/60 : 64,
+                15/60 : 68,
+                10/60 : 72,
+                5/60  : 76,
+                4/60  : 80,
+                }
+
+        try:
+            it = intg_dict[intg_min]
+        except:
             raise Exception('Unknown/unsupported integration time: %s' % (int_time))
 
-        #it_desc = f"Final Integration time: {it_desc}."
-        it_desc = f"{it_desc}"
+        if intg_min < 1:
+            it_desc = "%d sec" % int(intg_min * 60)
+        elif intg_min >= 1:
+            it_desc = "%d min"%intg_min
+
         tkindat = pc * 10000 + pt * 100 + it
 
         tkindat = str(int(tkindat))
