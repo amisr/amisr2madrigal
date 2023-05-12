@@ -108,7 +108,10 @@ class FileParams():
                 self.read_ProcessingParams(fp)
                 self.fitter_version \
                         = fp['/ProcessingParams/FittingInfo/Version'][()].decode('latin')
-                self.ion_masses = fp['/FittedParams/IonMass'][:]
+                if '/FittedParams/IonMass' in fp.keys():
+                    self.ion_masses = fp['/FittedParams/IonMass'][:]
+                else:
+                    self.ion_masses = None
 
         elif self.kindat_type == 'velocity':
             with h5py.File(self.hdf5file,'r') as fp:
