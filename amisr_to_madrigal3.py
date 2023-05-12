@@ -44,6 +44,8 @@ def main():
             help='Skip the creation of madrigal files if already exists.')
     parser.add_argument('--skip_doc_plots',action='store_true',
             help='Skip the creation of extra docs and plots.')
+    parser.add_argument('--no_transport_user',action='store_true',
+            help='Do the upload as a user other than transport.')
     parser.add_argument('--DirNum', nargs='?', const=None, type=int, default=0, 
             help = 'sufix added to the folder experiments, default=0, '
             'e.g. DirNum=0 -> experiments0, if no arguments then DirNum==None -> experiments')
@@ -89,9 +91,14 @@ def main():
         skip_doc_plots = True
     else:
         skip_doc_plots = False
+    if args.no_transport_user:
+        no_transport_user = True
+    else:
+        no_transport_user = False
+
     if args.upload:
         executing_user = pwd.getpwuid(os.getuid())[0]
-        if executing_user != 'transport':
+        if not no_transport_user and executing_user != 'transport':
             raise Exception('To upload to madrigal this code must be executed'
                     ' using the "transport" user.')
         print("Uploading to Madrigal 3...")
