@@ -418,10 +418,10 @@ def parseExpId(expId):
     if num == 0:
         extChar = ''
     else:
-        if num < 26:
+        if num <= 26:
             extChar = chr(96 + num)
         else:
-            extChar = chr(96 + int(num/26)) + chr(96 + num%26)
+            extChar = chr(96 + (num - 1)//26) + chr(97 + (num - 1)%26)
 
 
     # get 3 letter instrument mnemonic
