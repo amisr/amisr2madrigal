@@ -215,7 +215,7 @@ def uploadMadrigalFile(madAdminObj,expPath,fullMadFilename,fileDesc,
 
 
 def uploadMadrigalExp(madAdminObj,fullMadFilename,expTitle,
-        fileDesc,category,optChar,experimentsDirNum,PI,PIEmail,
+        fileDesc,category,optChar, dirName ,experimentsDirNum,PI,PIEmail,
         fileAnalyst,fileAnalystEmail):
     """
     uploadMadrigalExp uploads an already created Madrigal file to the
@@ -262,7 +262,7 @@ def uploadMadrigalExp(madAdminObj,fullMadFilename,expTitle,
             instCode = None,
             category = category,
             optChar = optChar,
-            dirName = None,
+            dirName = dirName,
             kindat = None,
             experimentsDirNum = experimentsDirNum,
             PI = PI,
@@ -430,9 +430,9 @@ def parseExpId(expId):
         raise ValueError('unknown instrument code in expId: <%i>' % (instCode))
 
 
-    dirName = os.path.join(madDBObj.getMadroot(),'experiments0','%04i' % year,mnem,'%s%s' % (thisDate.strftime('%d%b%y').lower(), extChar))
+    fulldirName = os.path.join(madDBObj.getMadroot(),'experiments0','%04i' % year,mnem,'%s%s' % (thisDate.strftime('%d%b%y').lower(), extChar))
 
-    return((thisDate, items[0], instCode, extChar, dirName))
+    return((thisDate, items[0], instCode, extChar, fulldirName))
 
 
 class BatchExperiment:
@@ -494,31 +494,8 @@ class BatchExperiment:
                 break
 
         # get optional character, if any
-        optChar = parseExpId(expId)[3]
-
-        # next find the time range in the data
-        #firstTime = None
-        #lastTime = None
-
-        #for fileNum in range(numFiles):
-        #    self.fileSection = 'File%i' % (fileNum + 1)
-        #    hdf5Filename = self.__iniData__.get(self.fileSection, 'hdf5Filename')
-        #    hdf5Type = self.__iniData__.get(self.fileSection, 'type')
-        #    fileHandler = hdf5Handler(hdf5Type)
-        #    startTime, endTime = fileHandler.getStartEndTimes(hdf5Filename)
-
-        #    print(startTime, endTime, hdf5Filename)
-
-        #    if firstTime == None:
-        #        firstTime = startTime
-        #    elif firstTime > startTime:
-        #        firstTime = startTime
-
-        #    if lastTime == None:
-        #        lastTime = endTime
-        #    elif lastTime < endTime:
-        #        lastTime = endTime
-
+        optChar = "" #parseExpId(expId)[3]
+        dirName = os.path.basename(parseExpId(expId)[4])
 
         # create new madrigal file name template
         instMnemonic = self.madInstObj.getInstrumentMnemonic(self.instrument).lower()
@@ -566,7 +543,7 @@ class BatchExperiment:
                 try:
 
                     expPath = uploadMadrigalExp(madAdminObj,tmpfullMadFilename,
-                            expTitle,fileDesc,category,optChar,experimentsDirNum,
+                            expTitle,fileDesc,category,optChar,dirName,experimentsDirNum,
                             PI,PIEmail,fileAnalyst,fileAnalystEmail)
                 except IOError:
                     x,y,z = sys.exc_info()
@@ -579,7 +556,7 @@ class BatchExperiment:
                     if info=='Yes':
                         distutils.dir_util.remove_tree(expPath+'/',verbose=1)
                         expPath = uploadMadrigalExp(madAdminObj,tmpfullMadFilename,
-                            expTitle,fileDesc,category,optChar,experimentsDirNum,
+                            expTitle,fileDesc,category,optChar,dirName,experimentsDirNum,
                             PI,PIEmail,fileAnalyst,fileAnalystEmail)
                     else:
                         raise IOError(y)
