@@ -106,8 +106,11 @@ class FileParams():
             print(f"Reading parameters from file {self.hdf5file}")
             with h5py.File(self.hdf5file,'r') as fp:
                 self.read_ProcessingParams(fp)
-                self.fitter_version \
+                try:
+                    self.fitter_version \
                         = fp['/ProcessingParams/FittingInfo/Version'][()].decode('latin')
+                except:
+                    self.fitter_version = "Unknown"
                 if '/FittedParams/IonMass' in fp.keys():
                     self.ion_masses = fp['/FittedParams/IonMass'][:]
                 else:
@@ -363,9 +366,12 @@ class MadrigalIni():
             int_time = os.path.splitext(hdf5file)[0].split('-')[-1] # final intg
             # e.g. 20120714.001_lp_5min-cal-vvelsLat-300sec.h5 -> 300sec
             #sub_type = hdf5file.split('-')[-2]
-            # FIX known typo:
+            # FIX known typos:
             if base_intg == "3min" and int_time == "60sec":
                 int_time = "180sec"
+            elif base_intg == "3min" and int_time == "500sec":
+                # known bad approximation
+                int_time = "9min"
             sub_type = f'{pulse_type}-{base_intg}'
             # e.g .20120714.001_lp_5min-cal-vvelsLat-300sec.h5 -> lp-5min
             # e.g. 20081108.001_lp_5min-vvels-300sec.h5 -> lp-5min
@@ -445,6 +451,8 @@ class MadrigalIni():
             intg_min = int(int_time.split('min')[0])
         elif int_time[-3:] == "sec":
             intg_min = float(int_time.split('sec')[0])/60
+
+        # Find closest intg time match
 
         try:
             it = min2it[intg_min]
