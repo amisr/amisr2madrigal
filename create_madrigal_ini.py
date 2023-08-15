@@ -594,7 +594,9 @@ def main():
     parser.add_argument("radar", help="The shortname of the radar.", choices=valid_radars)
     parser.add_argument("expdir", help="Path to the experiment directory, e.g. /Volumes/AMISR_PROCESSED/processed_data/PFISR/2021/01/MSWinds27H.v03/20210113.001")
     parser.add_argument('--specsfile', nargs=1,
-            help='specsfile can be used to specify category and file description to a file')
+            help='specsfile can be used to specify category and file description to a file.'
+                 'A csv file is expected with 3 columns: file name, category, description.'
+                 'The category can be: 1=default, 2=variant, 3=history,')
     # Get arguments. Convert argparser Namespace class to dictionary
     args = vars(parser.parse_args())
     
