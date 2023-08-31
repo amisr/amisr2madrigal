@@ -244,6 +244,11 @@ class MadrigalIni():
         # !!!!! WARNING: this logic fails for uncorrected bc/mc files! Fix later
         fitted_h5files = sorted(glob.glob(os.path.join(self.expdir_path,'*-fitcal.h5'))
                             , key =lambda x: (pulsetype_order(x),fname_seconds(x)))
+        # search for version
+        if len(fitted_h5files) == 0:
+            fitted_h5files = sorted(glob.glob(os.path.join(self.expdir_path,'*-fitcal.v???.h5'))
+                            , key =lambda x: (pulsetype_order(x),fname_seconds(x)))
+
         # if no -fitcal files, look for -cal files
         if len(fitted_h5files) == 0:
             fitted_h5files = sorted(glob.glob(os.path.join(self.expdir_path,'*-cal.h5'))
@@ -363,8 +368,9 @@ class MadrigalIni():
         elif kindat_type in ['velocity']:
             # e.g. 20230223.002_lp_5min-fitcal-vvelsLat-300sec.h5
             base_intg = int_time
-            int_time = os.path.splitext(hdf5file)[0].split('-')[-1] # final intg
+            int_time = os.path.splitext(hdf5file)[0].split(".v")[0].split('-')[-1] # final intg
             # e.g. 20120714.001_lp_5min-cal-vvelsLat-300sec.h5 -> 300sec
+            # e.g. 20120714.001_lp_5min-cal-vvelsLat-300sec.v001.h5 -> 300sec
             #sub_type = hdf5file.split('-')[-2]
             # FIX known typos:
             if base_intg == "3min" and int_time == "60sec":
@@ -451,6 +457,9 @@ class MadrigalIni():
             intg_min = int(int_time.split('min')[0])
         elif int_time[-3:] == "sec":
             intg_min = float(int_time.split('sec')[0])/60
+
+        else:
+            raise Exception('int_time[-3:] is neither min nor sec')
 
         # Find closest intg time match
 
@@ -567,7 +576,7 @@ class MadrigalIni():
             # Nov 14, 2022, P. Reyes. Changing for allowing different geoplots.
             #if self.filenum == 1:
             if kindat_type not in ['velocity']:
-                filematch = '*geoplot.png'
+                filematch = '*geoplot*.png'
                 title = 'Geometry Plot'
                 imgs = glob.glob(os.path.join(self.expdir_path,plots_directory,filematch))
                 if len(imgs) > 0:
