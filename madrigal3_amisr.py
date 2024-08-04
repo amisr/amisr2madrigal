@@ -2058,7 +2058,7 @@ def set_uncorrected_data_rec(inputs):
                                                  'numtxaeu', 'numrxaeu',
                                                  'cbadl', 'pl',
                                                  'tfreq', 'rfreq'),
-                                                ('range', 'popl', 'dpopl'),
+                                                ('range', 'popl', 'dpopl', 'sn'),
                                                 numUsedRanges,
                                                 ind2DList=['range'])
 
@@ -2138,7 +2138,7 @@ def set_fitted_data_rec(inputs):
                                                 endTime.microsecond/10000,
                                                 ('azm', 'elm', 'beamid', 'power', 'numtxaeu', 'numrxaeu', 'cbadl', 'pl', 'tfreq', 'rfreq'),
                                                 ('range', 'ne', 'dne', 'ti', 'dti', 'te', 'dte', 'vo', 'dvo', 'cgm_lat', 'cgm_long',
-                                                 'po+', 'dpo+', 'chisq', 'sn'),
+                                                 'po+', 'dpo+', 'chisq'),
                                                 len(valid_range_indices),
                                                 ind2DList=['range'])
 
