@@ -1869,6 +1869,10 @@ class hdf5UncorrectedToMadrigal:
             dpop = hdfObj.root.NeFromPower.dNeFrac
             dpopArray = dpop.read()
 
+            # snr
+            snr = hdfObj.root.NeFromPower.SNR
+            snrArray = snr.read()
+
             # time info
             days = hdfObj.root.Time.Day
             dayArray = days.read()
@@ -1968,10 +1972,11 @@ class hdf5UncorrectedToMadrigal:
                     rangeValue = rangeArray[0]
                 popValue = popArray[recIndex][beamIndex]
                 dpopValue = dpopArray[recIndex][beamIndex]
+                snrValue = snrArray[recIndex][beamIndex]
 
                 inputs.append((kinst,kindat,startTime,endTime,numUsedRanges,az,el,beamId,txpower,numtxaeu,
                                numrxaeu,baudCount,pulseLength,txFreq,rxFreq,lowerRangeIndex,upperRangeIndex,
-                               rangeValue,popValue,dpopValue)
+                               rangeValue,popValue,dpopValue,snrValue)
                              )
 
         print("There are %d jobs to execute..." % (len(inputs)))
@@ -2031,7 +2036,7 @@ def mp_wrapper(func,index,inputs,output_buffer_name,numjobs,dtype):
 def set_uncorrected_data_rec(inputs):
     (kinst,kindat,startTime,endTime,numUsedRanges,az,el,beamId,txpower,numtxaeu,
      numrxaeu,baudCount,pulseLength,txFreq,rxFreq,lowerRangeIndex,upperRangeIndex,
-     rangeValue,popValue,dpopValue) = inputs
+     rangeValue,popValue,dpopValue,snrValue) = inputs
 
     dataRec = madrigal.cedar.MadrigalDataRecord(kinst,
                                                 kindat,
@@ -2069,25 +2074,31 @@ def set_uncorrected_data_rec(inputs):
     dataRec.set1D('tfreq', txFreq)
     dataRec.set1D('rfreq', rxFreq)
     # set 2d values
-    for rangeIndex in range(lowerRangeIndex, upperRangeIndex):
+    for row, rangeIndex in enumerate(range(lowerRangeIndex, upperRangeIndex)):
         # range
         try:
             if np.isnan(rangeValue[rangeIndex]):
                 raise ValueError()
-            dataRec.set2D('range', rangeIndex-lowerRangeIndex,rangeValue[rangeIndex]/1000.0) # convert m -> km
+            dataRec.set2D('range', row,rangeValue[rangeIndex]/1000.0) # convert m -> km
         except ValueError:
-            dataRec.set2D('range', rangeIndex-lowerRangeIndex, 'missing')
+            dataRec.set2D('range', row, 'missing')
         # pop
         try:
             if np.isnan(popValue[rangeIndex]):
                 raise ValueError('popl is NaN')
-            dataRec.set2D('popl', rangeIndex-lowerRangeIndex,np.log10(popValue[rangeIndex]))
+            dataRec.set2D('popl', row,np.log10(popValue[rangeIndex]))
             if dpopValue[rangeIndex] <= 0.0 or np.isnan(dpopValue[rangeIndex]):
                 raise ValueError('problem with dpopl')
-            dataRec.set2D('dpopl', rangeIndex-lowerRangeIndex, np.log10(dpopValue[rangeIndex] * popValue[rangeIndex]))
+            dataRec.set2D('dpopl', row, np.log10(dpopValue[rangeIndex] * popValue[rangeIndex]))
         except ValueError:
-            dataRec.set2D('popl', rangeIndex-lowerRangeIndex, 'missing')
-            dataRec.set2D('dpopl', rangeIndex-lowerRangeIndex, 'missing')
+            dataRec.set2D('popl', row, 'missing')
+            dataRec.set2D('dpopl', row, 'missing')
+
+        # snr
+        if not np.isnan(snrValue[rangeIndex]):
+            dataRec.set2D('sn', row, snrValue[rangeIndex])
+        else:
+            dataRec.set2D('sn', row, 'missing')
 
     return dataRec
 
