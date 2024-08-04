@@ -2241,10 +2241,10 @@ def set_fitted_data_rec(inputs):
             dataRec.set2D('chisq', row, 'missing')
             
         # snr
-        if not np.isnan(snrValue[rangeIndex]):
-            dataRec.set2D('sn', row, snrValue[rangeIndex])
-        else:
-            dataRec.set2D('sn', row, 'missing')
+        #if not np.isnan(snrValue[rangeIndex]):
+        #    dataRec.set2D('sn', row, snrValue[rangeIndex])
+        #else:
+        #    dataRec.set2D('sn', row, 'missing')
 
         # cgm_lat
         try:
