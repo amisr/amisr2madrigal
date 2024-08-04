@@ -260,8 +260,9 @@ class MadrigalIni():
         #fitted_h5files = [os.path.basename(x) for x in fitted_h5files]
 
         #history_h5files = sorted(glob.glob(os.path.join(self.expdir_path,'categ.*.h5')))
-        history_h5files = sorted(glob.glob(os.path.join(self.expdir_path,'*-cal.h5')))
+        #history_h5files = sorted(glob.glob(os.path.join(self.expdir_path,'*-cal.h5')))
         #history_h5files = [os.path.basename(x) for x in history_h5files]
+        history_h5files = [] # 12Jul2024 solving problem: only -cal files and not -fitcal
 
         # look for vvels files
         vvels_h5files = sorted(glob.glob(os.path.join(self.expdir_path,
