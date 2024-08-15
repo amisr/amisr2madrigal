@@ -281,12 +281,17 @@ class MadrigalIni():
 
     def getspecsfile(self):
         """
-        Read a csv file with 3 columns: filename sufix, e.g
-        -fitcal or -fullchem_fitcal,category,filedescription
-        where category is the madrigal :
-        file.category (int) (1=default, 2=variant, 3=history, 4=real-time)
-        file description:
-        file.status (string)('preliminary', 'final', or any other description)
+        Read a csv file with 6 columns:
+        1) filename sufix:
+            e.g. -fitcal or -fullchem_fitcal,category,filedescription
+        2) category :
+            file.category (int) (1=default, 2=variant, 3=history, 4=real-time)
+        3) file description:
+            file.status (string)('preliminary', 'final', or any other description)
+        4) File output version tag:
+            e.g. 001
+        5) file comment:
+        6) file history:
         """
         self.specsfiledict = {}
         if type(self.specsfile) != type(None):
@@ -294,9 +299,13 @@ class MadrigalIni():
             with open(csvfile,'r') as fp:
                 csvFile = csv.reader(fp)
                 for line in csvFile:
-                    assert len(line) == 3
+                    assert len(line) == 6
                     self.specsfiledict.update({line[0]:dict(category=line[1],
-                                                        fileDesc=line[2])})
+                                                        fileDesc=line[2],
+                                                        fileOutVerTag=line[3],
+                                                        fileComment=line[4],
+                                                        fileHistory=line[5],
+                                              )})
 
 
     def build(self):
@@ -315,11 +324,14 @@ class MadrigalIni():
                      'derivedParams/vvelsLat',f'*{fnamesuffix}-vvelsLat-*sec.h5'))
                                             , key =lambda x: fname_seconds(x))
                  file_groups_dict.update({f"group{group}":dict(
-                                      fitted_h5files   = fitted_h5files,
-                                      vvelsLat_h5files = vvelsLat_h5files,
-                                      category = cat_descr_dict['category'],
-                                      status   = cat_descr_dict['fileDesc'])} # e.g. final,preliminary
-                                      )
+                              fitted_h5files   = fitted_h5files,
+                              vvelsLat_h5files = vvelsLat_h5files,
+                              category = cat_descr_dict['category'],
+                              status   = cat_descr_dict['fileDesc'], # e.g. final,preliminary
+                              fileOutVerTag = cat_descr_dict['fileOutVerTag'], # e.g. 001,002
+                              fileComment = cat_descr_dict['fileComment'],
+                              fileHistory = cat_descr_dict['fileHistory'],
+                              )})
         else:
             # search for -fitcal files
             # !!!!! WARNING: this logic fails for uncorrected bc/mc files! Fix later
@@ -354,7 +366,11 @@ class MadrigalIni():
                   fitted_h5files   = fitted_h5files,
                   vvelsLat_h5files = vvels_h5files,
                   category = "1",
-                  status   = "final")}
+                  status   = "final",
+                  fileOutVerTag = "001",
+                  fileComment = "",
+                  fileHistory = "",
+                    )}
                   )
         # Now let's build the Madrigal.ini file
         h5files = []
@@ -376,7 +392,11 @@ class MadrigalIni():
                     file_counter += 1
                     self.add_file('uncorrected_ne_only',h5file,
                             status   = groupdict['status'],
-                            category = groupdict['category'])
+                            category = groupdict['category'],
+                            fileOutVerTag = groupdict['fileOutVerTag'],
+                            fileComment = groupdict['fileComment'],
+                            fileHistory = groupdict['fileHistory'],
+                            )
 
         for ptype2do in ['ac','lp']:
             for gname,groupdict in file_groups_dict.items():
@@ -388,10 +408,18 @@ class MadrigalIni():
                         file_counter += 1
                         self.add_file('uncorrected_ne_only',h5file,
                             status   = groupdict['status'],
-                            category = groupdict['category'])
+                            category = groupdict['category'],
+                            fileOutVerTag = groupdict['fileOutVerTag'],
+                            fileComment = groupdict['fileComment'],
+                            fileHistory = groupdict['fileHistory'],
+                            )
                         self.add_file('standard',h5file,
                             status   = groupdict['status'],
-                            category = groupdict['category'])
+                            category = groupdict['category'],
+                            fileOutVerTag = groupdict['fileOutVerTag'],
+                            fileComment = groupdict['fileComment'],
+                            fileHistory = groupdict['fileHistory'],
+                            )
 
         for gname,groupdict in file_groups_dict.items():
             h5files = groupdict['vvelsLat_h5files']
@@ -401,7 +429,11 @@ class MadrigalIni():
                 file_counter += 1
                 self.add_file('velocity',h5file,
                         status   = groupdict['status'],
-                        category = groupdict['category'])
+                        category = groupdict['category'],
+                        fileOutVerTag = groupdict['fileOutVerTag'],
+                        fileComment = groupdict['fileComment'],
+                        fileHistory = groupdict['fileHistory'],
+                    )
 
 
     def read_experiment_description(self):
@@ -608,7 +640,8 @@ class MadrigalIni():
         return tkindat, extend_ckindat, ckindat
 
 
-    def add_file(self, kindat_type, hdf5file_fullpath, status=None, category=None):
+    def add_file(self, kindat_type, hdf5file_fullpath, status=None, category=None,
+                       fileOutVerTag=None, fileComment=None, fileHistory=None):
         """Add h5 file to the madrigal.ini file
         """
         file_params = FileParams(hdf5file_fullpath, kindat_type)
@@ -640,7 +673,9 @@ class MadrigalIni():
 
         self.configfile.set(file_title,'status', status) # 'final')
         self.configfile.set(file_title,'category', category) #,'1')
-        self.configfile.set(file_title,'history','')
+        self.configfile.set(file_title,'history',fileHistory)
+        self.configfile.set(file_title,'fileOutVerTag',fileOutVerTag)
+        self.configfile.set(file_title,'fileComment',fileComment)
 
         if kindat_type == 'uncorrected_ne_only':
             lowerRange = str(self.RANGE_LIMS[sub_type][0])
