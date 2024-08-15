@@ -56,7 +56,7 @@ min2it = {
         4/60  : 80,
         }
 
-def fname_seconds(x):
+def fname_seconds(fullpathname):
     # old ones:
     #  THIS CASE IS NOT CONSIDERED, ONLY derivedParams/vvelsLat
     #  20090719.001_lp_1min.h5
@@ -75,7 +75,8 @@ def fname_seconds(x):
     #
     #  20230223.002_lp_5min-fitcal.h5
     #  derivedParams/vvelsLat/20230223.002_lp_5min-fitcal-vvelsLat-300sec.h5
-    numloc = x.rfind("_")
+    x = os.path.basename(fullpathname)
+    numloc = x.find("_",x.find("_")+1) # find second _
     minloc = x.find("min")
     if minloc >=0:
         return 60*int(x[numloc+1:minloc])
@@ -116,6 +117,9 @@ class FileParams():
                 else:
                     self.ion_masses = None
 
+                self.conf_proc_dict = self.read_fitter_config(fp)
+                #print(self.conf_proc_dict)
+
         elif self.kindat_type == 'velocity':
             with h5py.File(self.hdf5file,'r') as fp:
                 self.read_ProcessingParams(fp)
@@ -133,6 +137,66 @@ class FileParams():
         self.BaudLength = fp['/ProcessingParams/BaudLength'][()]
         self.TxFrequency = fp['/ProcessingParams/TxFrequency'][()]
         self.RxFrequency = fp['/ProcessingParams/RxFrequency'][()]
+
+    def read_fitter_config(self,fp):
+        config_fit_contents = ""
+        config_io_contents = ""
+        try:
+            for key,val in fp['/ProcessingParams/FittingInfo/ConfigFiles'].items():
+                config_fname = val['Name'][()].decode('latin')
+                if "_fit_" in config_fname:
+                    config_fit_contents = val['Contents'][()].decode('latin')
+                elif "_io_" in config_fname:
+                    config_io_contents = val['Contents'][()].decode('latin')
+        except:
+            print("Error fetching config_fit and config_io files.")
+
+        FlipchemAltop = '300' # Default. It was hard coded in the fitter before
+                       # it became a parameter in config_fit (8/14/2024 P.Reyes)
+        perturbation_noise = '0'
+        summation_rule = ""
+        proc_funcname = ""
+
+        if config_fit_contents != "":
+            config0 = configparser.ConfigParser()
+            try:
+                config0.read_string(config_fit_contents)
+            except:
+                print("Error reading config fit file")
+            try:
+                FlipchemAltop = config0['FIT_OPTIONS']['FlipchemAltop']
+            except:
+                print("No FlipchemAltop found in config_fit file. Use 300")
+                FlipchemAltop = '300' # Default. It was hard coded in the fitter before
+                       # it became a parameter in config_fit (8/14/2024 P.Reyes)
+            try:
+                perturbation_noise = config0['FIT_OPTIONS']['PERTURBATION_NOISE']
+            except:
+                print("No perturbation noise found in config_fit file. Use 0")
+                perturbation_noise = '0'
+            try:
+                summation_rule = config0['FIT_OPTIONS']['SUMMATION_RULE']
+            except:
+                print("No summation rule found in config_fit file.")
+                summation_rule = ""
+        if config_io_contents != "":
+            config1 = configparser.ConfigParser()
+            try:
+                config1.read_string(config_io_contents)
+            except:
+                print("Error reading config io file")
+            try:
+                proc_funcname = config1['OUTPUT']['proc_funcname']
+            except:
+                print("No proc_funcname found in config_io file.")
+
+        conf_proc_dict = dict(FlipchemAltop      = FlipchemAltop,
+                              perturbation_noise = perturbation_noise,
+                              summation_rule     = summation_rule,
+                              proc_funcname      = proc_funcname)
+
+        return conf_proc_dict
+
 
 class MadrigalIni():
     RADARS = {'pfisr': {'name': 'PFISR',
@@ -183,7 +247,7 @@ class MadrigalIni():
              }
 
 
-    def __init__(self,radar,expdir_path, specsfile ):
+    def __init__(self,radar,expdir_path, specsfile = None):
         # radar information
         self.radar = self.RADARS[radar]['name']
         self.instrument_number = self.RADARS[radar]['instrument_number']
@@ -217,7 +281,8 @@ class MadrigalIni():
 
     def getspecsfile(self):
         """
-        Read a csv file with 3 columns: filename,category,filedescription
+        Read a csv file with 3 columns: filename sufix, e.g
+        -fitcal or -fullchem_fitcal,category,filedescription
         where category is the madrigal :
         file.category (int) (1=default, 2=variant, 3=history, 4=real-time)
         file description:
@@ -240,64 +305,103 @@ class MadrigalIni():
         self.add_default()
         self.add_experiment()
 
-        # search for -fitcal files
-        # !!!!! WARNING: this logic fails for uncorrected bc/mc files! Fix later
-        fitted_h5files = sorted(glob.glob(os.path.join(self.expdir_path,'*-fitcal.h5'))
+        file_groups_dict = {}
+        if self.specsfiledict != {}:
+             for group,(fnamesuffix,cat_descr_dict) in enumerate(self.specsfiledict.items()):
+                 fitted_h5files = sorted(glob.glob(os.path.join(self.expdir_path,f'*{fnamesuffix}.h5'))
                             , key =lambda x: (pulsetype_order(x),fname_seconds(x)))
-        # search for version
-        if len(fitted_h5files) == 0:
-            fitted_h5files = sorted(glob.glob(os.path.join(self.expdir_path,'*-fitcal.v???.h5'))
-                            , key =lambda x: (pulsetype_order(x),fname_seconds(x)))
+                 # look for vvelsLat files
+                 vvelsLat_h5files = sorted(glob.glob(os.path.join(self.expdir_path,
+                     'derivedParams/vvelsLat',f'*{fnamesuffix}-vvelsLat-*sec.h5'))
+                                            , key =lambda x: fname_seconds(x))
+                 file_groups_dict.update({f"group{group}":dict(
+                                      fitted_h5files   = fitted_h5files,
+                                      vvelsLat_h5files = vvelsLat_h5files,
+                                      category = cat_descr_dict['category'],
+                                      status   = cat_descr_dict['fileDesc'])} # e.g. final,preliminary
+                                      )
+        else:
+            # search for -fitcal files
+            # !!!!! WARNING: this logic fails for uncorrected bc/mc files! Fix later
+            fitted_h5files = sorted(glob.glob(os.path.join(self.expdir_path,'*-fitcal.h5'))
+                                , key =lambda x: (pulsetype_order(x),fname_seconds(x)))
+            # search for version
+            if len(fitted_h5files) == 0:
+                fitted_h5files = sorted(glob.glob(os.path.join(self.expdir_path,'*-fitcal.v???.h5'))
+                                , key =lambda x: (pulsetype_order(x),fname_seconds(x)))
 
-        # if no -fitcal files, look for -cal files
-        if len(fitted_h5files) == 0:
-            fitted_h5files = sorted(glob.glob(os.path.join(self.expdir_path,'*-cal.h5'))
-                            , key =lambda x: (pulsetype_order(x),fname_seconds(x)))
+            # if no -fitcal files, look for -cal files
+            if len(fitted_h5files) == 0:
+                fitted_h5files = sorted(glob.glob(os.path.join(self.expdir_path,'*-cal.h5'))
+                                , key =lambda x: (pulsetype_order(x),fname_seconds(x)))
 
-        # if no -fitcal or -cal files, error out.
-        if len(fitted_h5files) == 0:
-            raise Exception("No '*-fitcal.h5' nor '*-cal.h5' files found.")
-        #fitted_h5files = [os.path.basename(x) for x in fitted_h5files]
+            # if no -fitcal or -cal files, error out.
+            if len(fitted_h5files) == 0:
+                raise Exception("No '*-fitcal.h5' nor '*-cal.h5' files found.")
+            #fitted_h5files = [os.path.basename(x) for x in fitted_h5files]
 
-        #history_h5files = sorted(glob.glob(os.path.join(self.expdir_path,'categ.*.h5')))
-        #history_h5files = sorted(glob.glob(os.path.join(self.expdir_path,'*-cal.h5')))
-        #history_h5files = [os.path.basename(x) for x in history_h5files]
-        history_h5files = [] # 12Jul2024 solving problem: only -cal files and not -fitcal
+            #history_h5files = sorted(glob.glob(os.path.join(self.expdir_path,'categ.*.h5')))
+            #history_h5files = sorted(glob.glob(os.path.join(self.expdir_path,'*-cal.h5')))
+            #history_h5files = [os.path.basename(x) for x in history_h5files]
+            history_h5files = [] # 12Jul2024 solving problem: only -cal files and not -fitcal
 
-        # look for vvels files
-        vvels_h5files = sorted(glob.glob(os.path.join(self.expdir_path,
-            'derivedParams/vvelsLat','*.h5'))
-                                    , key =lambda x: fname_seconds(x))
-        #vvels_h5files = [os.path.basename(x) for x in vvels_h5files]
-
+            # look for vvels files
+            vvels_h5files = sorted(glob.glob(os.path.join(self.expdir_path,
+                'derivedParams/vvelsLat','*.h5'))
+                                        , key =lambda x: fname_seconds(x))
+            #vvels_h5files = [os.path.basename(x) for x in vvels_h5files]
+            file_groups_dict.update({"group0":dict(
+                  fitted_h5files   = fitted_h5files,
+                  vvelsLat_h5files = vvels_h5files,
+                  category = "1",
+                  status   = "final")}
+                  )
         # Now let's build the Madrigal.ini file
-        h5files = fitted_h5files + vvels_h5files + history_h5files
+        h5files = []
+        for gname,groupdict in file_groups_dict.items():
+            h5files += groupdict['fitted_h5files'] + groupdict['vvelsLat_h5files']
+        #h5files = fitted_h5files + vvels_h5files + history_h5files
 
         file_counter = 0
         num_h5files = len(h5files)
+        #print(num_h5files,file_groups_dict)
 
         ptype2do = "bc"
-        for h5file in fitted_h5files + history_h5files:
-            if os.path.basename(h5file).split('_')[1] == ptype2do:
-                print('Working on file %d/%d: %s' % (file_counter+1,
-                    num_h5files,h5file))
-                file_counter += 1
-                self.add_file('uncorrected_ne_only',h5file)
-
-        for ptype2do in ['ac','lp']:
-            for h5file in fitted_h5files + history_h5files:
+        for gname,groupdict in file_groups_dict.items():
+            h5files = groupdict['fitted_h5files']
+            for h5file in h5files:
                 if os.path.basename(h5file).split('_')[1] == ptype2do:
                     print('Working on file %d/%d: %s' % (file_counter+1,
                         num_h5files,h5file))
                     file_counter += 1
-                    self.add_file('uncorrected_ne_only',h5file)
-                    self.add_file('standard',h5file)
+                    self.add_file('uncorrected_ne_only',h5file,
+                            status   = groupdict['status'],
+                            category = groupdict['category'])
 
-        for h5file in vvels_h5files:
-            print('Working on file %d/%d: %s' % (file_counter+1,
-                    num_h5files,h5file))
-            file_counter += 1
-            self.add_file('velocity',h5file)
+        for ptype2do in ['ac','lp']:
+            for gname,groupdict in file_groups_dict.items():
+                h5files = groupdict['fitted_h5files']
+                for h5file in h5files:
+                    if os.path.basename(h5file).split('_')[1] == ptype2do:
+                        print('Working on file %d/%d: %s' % (file_counter+1,
+                            num_h5files,h5file))
+                        file_counter += 1
+                        self.add_file('uncorrected_ne_only',h5file,
+                            status   = groupdict['status'],
+                            category = groupdict['category'])
+                        self.add_file('standard',h5file,
+                            status   = groupdict['status'],
+                            category = groupdict['category'])
+
+        for gname,groupdict in file_groups_dict.items():
+            h5files = groupdict['vvelsLat_h5files']
+            for h5file in h5files:
+                print('Working on file %d/%d: %s' % (file_counter+1,
+                        num_h5files,h5file))
+                file_counter += 1
+                self.add_file('velocity',h5file,
+                        status   = groupdict['status'],
+                        category = groupdict['category'])
 
 
     def read_experiment_description(self):
@@ -360,7 +464,14 @@ class MadrigalIni():
         # bc, lp, ac
         # extract integration time from hdf5file name
         #int_time = hdf5file.split('_')[2].split('-')[0]
-        int_time = os.path.splitext(hdf5file)[0].split('_')[2].split('-')[0]
+        x = os.path.basename(hdf5file)
+        numloc = x.find("_",x.find("_")+1) # find second _
+        minloc = x.find("min")
+        if minloc >= 0:
+            int_time = x[numloc+1:minloc+3]
+        else:
+            secloc = x.find("sec")
+            int_time = x[numloc+1:secloc+3]
         # e.g. 20230223.002_lp_5min-fitcal.h5 -> 5min
         # e.g. 20100529.002_lp_2min.h5 -> 2min
         if kindat_type in ['uncorrected_ne_only', 'standard']:
@@ -403,7 +514,16 @@ class MadrigalIni():
                 pc_desc = 'Fitted'
                 extend_ckindat += "Fitted with standard overspread code for ion masses: " \
                         f"{', '.join(file_params.ion_masses.astype(str))}. "
+                extend_ckindat += "Composition above"\
+                       f" {file_params.conf_proc_dict['FlipchemAltop']} km "\
+                        "has been considered to be 100% O+. "
                 extend_ckindat += f"Fitter version used: {file_params.fitter_version}. "
+                extend_ckindat += "Fitter function used: "\
+                            f"{file_params.conf_proc_dict['proc_funcname']}. "
+                extend_ckindat += "Summation rule used: "\
+                            f"{file_params.conf_proc_dict['summation_rule']}. "
+                if file_params.conf_proc_dict['perturbation_noise'] == "1":
+                    extend_ckindat += "A range dependent perturbation noise has been used. "
             else:
                 raise Exception('Unknown/unsupported processed file type '\
                               '"%s" for file: %s' % (sub_type,hdf5file))
@@ -488,7 +608,7 @@ class MadrigalIni():
         return tkindat, extend_ckindat, ckindat
 
 
-    def add_file(self, kindat_type, hdf5file_fullpath):
+    def add_file(self, kindat_type, hdf5file_fullpath, status=None, category=None):
         """Add h5 file to the madrigal.ini file
         """
         file_params = FileParams(hdf5file_fullpath, kindat_type)
@@ -509,7 +629,8 @@ class MadrigalIni():
         # write the file information
         tkindat, extend_ckindat, ckindat = self.determine_kindat(
                 kindat_type, hdf5file, file_params)
-        status, category = self.determine_status_category(hdf5file)
+        if type(status) == type(None) and type(category) == type(category):
+            status, category = self.determine_status_category(hdf5file)
         self.configfile.set(file_title,'hdf5Filename',path_template+hdf5file)
         self.configfile.set(file_title,'kindat',tkindat)
         self.configfile.set(file_title,'extend_ckindat',extend_ckindat)
