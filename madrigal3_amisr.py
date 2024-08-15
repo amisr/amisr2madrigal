@@ -323,7 +323,8 @@ def createMad3File(args):
         except: kindatDesc = None
         try: analyst = iniData.get(fileSection, 'analyst')
         except: analyst = None
-        try: comments = iniData.get(fileSection, 'comments')
+        #try: comments = iniData.get(fileSection, 'comments')
+        try: comments = iniData.get(fileSection, 'fileComment')
         except: comments = None
         try: history = iniData.get(fileSection, 'history')
         except: history = None
@@ -510,31 +511,40 @@ class BatchExperiment:
             self.fileSection = 'File%i' % (fileNum + 1)
             kindat = int(self.__iniData__.get(self.fileSection, 'kindat'))
 
-            if type(file_version) == int:
-                ver2use = file_version
-            elif type(file_version) == type(None):
-                # here should be the last version created
-                allversions = sorted(glob.glob(os.path.join(OutPath,
-                    madFilenameTemplate + kindat2fname(kindat) + ".???.h5")))
-                if len(allversions)>0:
-                    ver2use = int(allversions[-1].split('.')[-2]) + 1
+            if False:
+                # previous version control
+                if type(file_version) == int:
+                    ver2use = file_version
+                elif type(file_version) == type(None):
+                    # here should be the last version created
+                    allversions = sorted(glob.glob(os.path.join(OutPath,
+                        madFilenameTemplate + kindat2fname(kindat) + ".???.h5")))
+                    if len(allversions)>0:
+                        ver2use = int(allversions[-1].split('.')[-2]) + 1
+                    else:
+                        ver2use = 1
                 else:
-                    ver2use = 1
-            else:
-                raise Exception("file_version needs to be int or None.")
+                    raise Exception("file_version needs to be int or None.")
 
-            madFilename = madFilenameTemplate + kindat2fname(kindat)\
-                + f'.{ver2use:03d}.h5'
+                madFilename = madFilenameTemplate + kindat2fname(kindat)\
+                    + f'.{ver2use:03d}.h5'
+            else:
+                fileOutVerTag = self.__iniData__.get(self.fileSection, 'fileOutVerTag')
+                madFilename = madFilenameTemplate + kindat2fname(kindat)\
+                    + f'.{fileOutVerTag}.h5'
+
             fullMadFilename = os.path.join(OutPath,madFilename)
 
             print(f"working on file: {fullMadFilename}")
             if not os.path.exists(fullMadFilename):
                 raise Exception(f"file {fullMadFilename} does not exist.")
 
-            hdf5Type = self.__iniData__.get(self.fileSection, 'type')
-            status = self.__iniData__.get(self.fileSection, 'status')
+            hdf5Type     = self.__iniData__.get(self.fileSection, 'type')
+            status       = self.__iniData__.get(self.fileSection, 'status')
+            fileDesc     = status
+            fileComment  = self.__iniData__.get(self.fileSection, 'fileComment')
+            fileHistory  = self.__iniData__.get(self.fileSection, 'fileHistory')
             category = int(self.__iniData__.get(self.fileSection, 'category'))
-            fileDesc=status
 
             shutil.copyfile(fullMadFilename, os.path.join('/tmp',madFilename))
             tmpfullMadFilename=os.path.join('/tmp',madFilename)
@@ -803,19 +813,25 @@ class BatchExperiment:
         for fileNum in range(numFiles):
             self.fileSection = 'File%i' % (fileNum + 1)
             kindat = int(self.__iniData__.get(self.fileSection, 'kindat'))
-            if type(file_version) == int:
-                madFilename = madFilenameTemplate + kindat2fname(kindat)\
-                    + f'.{file_version:03d}.h5'
-                fullMadFilename = os.path.join(OutPath,madFilename)
-            elif type(file_version) == type(None):
-                for fcount in range(1,1000):
+            if False:
+                if type(file_version) == int:
                     madFilename = madFilenameTemplate + kindat2fname(kindat)\
-                                + f'.{fcount:03d}.h5'
+                        + f'.{file_version:03d}.h5'
                     fullMadFilename = os.path.join(OutPath,madFilename)
-                    if not os.path.exists(fullMadFilename):
-                        break
+                elif type(file_version) == type(None):
+                    for fcount in range(1,1000):
+                        madFilename = madFilenameTemplate + kindat2fname(kindat)\
+                                    + f'.{fcount:03d}.h5'
+                        fullMadFilename = os.path.join(OutPath,madFilename)
+                        if not os.path.exists(fullMadFilename):
+                            break
+                else:
+                    raise Exception("file_version needs to be int or None.")
             else:
-                raise Exception("file_version needs to be int or None.")
+                fileOutVerTag = self.__iniData__.get(self.fileSection, 'fileOutVerTag')
+                madFilename = madFilenameTemplate + kindat2fname(kindat)\
+                    + f'.{fileOutVerTag}.h5'
+                fullMadFilename = os.path.join(OutPath,madFilename)
 
             print(f"working on file: {fullMadFilename}")
 
