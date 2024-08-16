@@ -548,7 +548,7 @@ class MadrigalIni():
                         f"{', '.join(file_params.ion_masses.astype(str))}. "
                 extend_ckindat += "Composition above"\
                        f" {file_params.conf_proc_dict['FlipchemAltop']} km "\
-                        "has been considered to be 100% O+. "
+                        "has been considered to be only O+. "
                 extend_ckindat += f"Fitter version used: {file_params.fitter_version}. "
                 extend_ckindat += "Fitter function used: "\
                             f"{file_params.conf_proc_dict['proc_funcname']}. "

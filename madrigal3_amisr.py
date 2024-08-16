@@ -543,7 +543,7 @@ class BatchExperiment:
             status       = self.__iniData__.get(self.fileSection, 'status')
             fileDesc     = status
             fileComment  = self.__iniData__.get(self.fileSection, 'fileComment')
-            fileHistory  = self.__iniData__.get(self.fileSection, 'fileHistory')
+            history  = self.__iniData__.get(self.fileSection, 'history')
             category = int(self.__iniData__.get(self.fileSection, 'category'))
 
             shutil.copyfile(fullMadFilename, os.path.join('/tmp',madFilename))
