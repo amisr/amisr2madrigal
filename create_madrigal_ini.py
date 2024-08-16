@@ -553,7 +553,7 @@ class MadrigalIni():
                 extend_ckindat += "Fitter function used: "\
                             f"{file_params.conf_proc_dict['proc_funcname']}. "
                 extend_ckindat += "Summation rule used: "\
-                            f"{file_params.conf_proc_dict['summation_rule']}. "
+                            f"{file_params.conf_proc_dict['summation_rule'].replace(',',', ')}. "
                 if file_params.conf_proc_dict['perturbation_noise'] == "1":
                     extend_ckindat += "A range dependent perturbation noise has been used. "
             else:
