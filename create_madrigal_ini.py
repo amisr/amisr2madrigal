@@ -234,10 +234,10 @@ class MadrigalIni():
                           'Te/Ti Ratio','LOS Velocity'],
                      },
         'velocity': {
-            'filematch': ['*-emag*.png',
-                          '*-evec*.png',
-                          '*-vmag*.png',
-                          '*-vvec*.png'],
+            'filematch': ['-emag*.png',
+                          '-evec*.png',
+                          '-vmag*.png',
+                          '-vvec*.png'],
             'titles':    ['Electric Field Magnitude and Direction',
                           'Vector Electric Fields',
                           'Velocity Magnitude and Direction',
@@ -712,10 +712,14 @@ class MadrigalIni():
                     # filematch = "*-emag*.pngi", title = 'Vector Velocities'
                     # this is needed because all the vvels files are in one folder
                     # e.g. derivedParams/vvelsLat/20230223.002_lp_5min-fitcal-vvelsLat-300sec.h5
-                    int_time = hdf5file.split('_')[2].split('-')[0]
+                    #int_time = hdf5file.split('_')[2].split('-')[0]
                     # 5min
+                    #imgs = sorted(glob.glob(os.path.join(self.expdir_path,plots_directory,
+                    #    "*"+int_time+filematch)))
+                    # 8/20/2024 P.Reyes: Turns out it might be simpler to just use the source:
                     imgs = sorted(glob.glob(os.path.join(self.expdir_path,plots_directory,
-                        "*"+int_time+filematch)))
+                        os.path.splitext(hdf5file)[0]+filematch)))
+
                 else:
                     imgs = sorted(glob.glob(os.path.join(self.expdir_path,plots_directory,filematch)))
                 imgs = [os.path.basename(x) for x in imgs]
